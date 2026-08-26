@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans:
+    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+:root {
+  color-scheme: light;
+  --background: #f9fafb;
+  --foreground: #111827;
+  --muted-foreground: #6b7280;
+  --secondary-foreground: #9ca3af;
+  --card: #ffffff;
+  --muted: #f3f4f6;
+  --accent: #f9fafb;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --primary: #111827;
+  --primary-foreground: #ffffff;
+  --primary-soft: #f3f4f6;
+  --brand: #3b82f6;
+  --brand-strong: #2563eb;
+  --brand-soft: #eff6ff;
+  --success: #10b981;
+  --success-soft: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --danger: #ef4444;
+  --danger-soft: #fef2f2;
+  --info: #6366f1;
+  --info-soft: #eef2ff;
+  --sidebar-width: 66px;
+  --header-height: 60px;
+  --field-bg: #ffffff;
+  --field-border: #e5e7eb;
+  --field-focus: #3b82f6;
+  --field-ring: rgba(59, 130, 246, 0.12);
+  --shell: oklch(96.7% 0.001 286.375);
+  --shell-foreground: oklch(21% 0.006 285.885);
+  --shell-muted: oklch(55.2% 0.016 285.938);
+  --shell-active: oklch(92% 0.004 286.32);
+  --shell-hover: oklch(94% 0.003 286.3);
+  --shell-border: oklch(87.1% 0.006 286.286);
+  --shell-elevated: oklch(98.5% 0 0);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0f1115;
+  --foreground: #f3f4f6;
+  --muted-foreground: #9ca3af;
+  --secondary-foreground: #6b7280;
+  --card: #1a1d24;
+  --muted: #1f2329;
+  --accent: #252830;
+  --border: #2d3139;
+  --border-strong: #3d4149;
+  --primary: #f3f4f6;
+  --primary-foreground: #111827;
+  --primary-soft: #1f2329;
+  --brand: #60a5fa;
+  --brand-strong: #3b82f6;
+  --brand-soft: #1e3a5f;
+  --field-bg: #1a1d24;
+  --field-border: #2d3139;
+  --field-focus: #60a5fa;
+  --field-ring: rgba(96, 165, 250, 0.12);
+  --success-soft: #064e3b;
+  --warning-soft: #451a03;
+  --danger-soft: #450a0a;
+  --info-soft: #1e1b4b;
+  --shell: oklch(27.4% 0.006 286.033);
+  --shell-foreground: oklch(96.7% 0.001 286.375);
+  --shell-muted: oklch(70.5% 0.015 286.067);
+  --shell-active: oklch(37% 0.013 285.805);
+  --shell-hover: oklch(32% 0.01 285.9);
+  --shell-border: oklch(37% 0.013 285.805);
+  --shell-elevated: oklch(21% 0.006 285.885);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
