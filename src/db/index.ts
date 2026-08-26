@@ -8,4 +8,12 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not configured");
 }
 
-export const db = drizzle(neon(connectionString), { schema });
+const databaseUrl = new URL(connectionString);
+// Neon HTTP uses TLS directly; libpq channel binding makes fetch connections flaky.
+databaseUrl.searchParams.delete("channel_binding");
+
+const sql = neon(databaseUrl.toString(), {
+  fetchOptions: { cache: "no-store" },
+});
+
+export const db = drizzle(sql, { schema });
