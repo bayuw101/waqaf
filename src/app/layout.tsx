@@ -29,6 +29,7 @@ export default async function RootLayout({
         email: context.user.email,
       }}
       activeProject={context.active.project.id}
+      owner={context.active.role === "owner"}
       projects={context.memberships.map(({ project }) => ({
         id: project.id,
         name: project.name,
