@@ -41,13 +41,14 @@ export function Topbar({
       <div className="flex min-w-0 flex-1 items-center gap-2 text-[11px] text-[var(--shell-muted)]">
         <Home size={14} />
         <ChevronDown size={11} className="-rotate-90" />
-        <ProjectSwitcher active={activeProject} projects={projects} />
+        <span className="hidden sm:inline">AmanahKas</span>
         <ChevronDown size={11} className="hidden -rotate-90 sm:block" />
         <b className="truncate font-semibold text-[var(--shell-foreground)] capitalize">
           {page}
         </b>
       </div>
       <div className="flex items-center gap-2">
+        <ProjectSwitcher active={activeProject} projects={projects} />
         <button className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[var(--shell-muted)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-foreground)]">
           <Bell size={16} />
           <i className="absolute right-1.5 top-1.5 h-1 w-1 rounded-full bg-[var(--danger)]" />

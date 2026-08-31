@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { AppShell } from "@/components/layout/app-shell";
 import { auth } from "@/auth";
 import { projectContext } from "@/lib/projects";
+import { PageTransitionLoader } from "@/components/layout/page-transition-loader";
 
 export const metadata: Metadata = {
   title: "AmanahKas",
@@ -41,6 +42,7 @@ export default async function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body>
+        <PageTransitionLoader />
         <ThemeProvider>
           <ToastProvider>
             <FinanceProvider>{content}</FinanceProvider>

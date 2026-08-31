@@ -23,7 +23,7 @@ export async function createInvitation() {
     createdBy: user.id,
     expiresAt: invitationExpiry(),
   });
-  redirect(`/settings/project?invitation=${encodeURIComponent(token)}`);
+  return `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
 }
 
 export async function revokeInvitation(invitationId: string) {
