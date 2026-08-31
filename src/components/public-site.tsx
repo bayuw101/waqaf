@@ -53,7 +53,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     <div className="h-screen overflow-hidden bg-[var(--shell)]">
       <div className="flex h-screen flex-col p-2 pt-0 md:p-2.5 md:pt-0">
         <PublicHeader />
-        <main className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-[var(--background)] shadow-xl md:rounded-xl">
+        <main className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/70 bg-[var(--background)] shadow-[0_-6px_24px_rgba(0,0,0,.14),0_20px_60px_rgba(0,0,0,.18)] ring-1 ring-black/10 md:mt-1.5 md:rounded-xl">
           {children}
           <PublicFooter />
         </main>
