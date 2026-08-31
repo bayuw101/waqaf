@@ -3,6 +3,7 @@
 import {
   Check,
   ChevronDown,
+  Copy,
   FolderKanban,
   Loader2,
   Plus,
@@ -62,19 +63,21 @@ export function ProjectSwitcher({
           type="button"
           disabled={pending}
           onClick={() => setOpen((value) => !value)}
-          className="flex h-8 max-w-52 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-2.5 text-left text-[var(--shell-foreground)] shadow-sm transition-colors hover:border-white/20 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+          className="flex h-8 max-w-52 items-center gap-2 rounded-lg bg-white/[0.06] pr-2 pl-[5px] text-left text-[var(--shell-foreground)] border border-gray-200 transition-colors hover:border-gray/400 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
         >
-          {pending && action?.startsWith("switch:") ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <FolderKanban
-              size={13}
-              className="shrink-0 text-[var(--shell-muted)]"
-            />
-          )}
+          <div className="border border-gray-300 p-[4px] rounded-sm bg-gray-400/10">
+            {pending && action?.startsWith("switch:") ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <FolderKanban
+                size={13}
+                className="shrink-0 text-[var(--shell-muted)]"
+              />
+            )}
+          </div>
           <span className="min-w-0 flex-1">
-            <small className="block text-[8px] font-semibold uppercase leading-none tracking-wider text-[var(--shell-muted)]">
-              Project
+            <small className="block mb-[2px] text-[7px] font-semibold uppercase leading-none tracking-wider text-[var(--shell-muted)]">
+              Active Project
             </small>
             <span className="block truncate text-[11px] font-semibold leading-tight">
               {selected.name}
@@ -190,13 +193,16 @@ export function ProjectSwitcher({
           />
           <Button
             size="sm"
+            aria-label="Salin tautan undangan"
+            title="Salin tautan undangan"
+            className="h-10 w-10 px-0"
             onClick={async () => {
               await navigator.clipboard.writeText(inviteLink);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
           >
-            {copied ? <Check size={14} /> : "Salin"}
+            {copied ? <Check size={14} /> : <Copy size={14} />}
           </Button>
         </div>
       </Dialog>
