@@ -11,7 +11,7 @@ import {
 
 export function PublicHeader() {
   return (
-    <header className="relative z-20 flex h-[60px] shrink-0 items-center gap-3 bg-[var(--shell)] px-3 text-[var(--shell-foreground)] md:px-5">
+    <header className="relative z-20 flex h-[60px] shrink-0 items-center gap-3  px-3 text-[var(--shell-foreground)] md:px-5">
       <a
         href="/"
         className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-[var(--shell-hover)]"
