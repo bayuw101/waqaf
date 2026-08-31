@@ -30,8 +30,14 @@ export async function switchProject(projectId: string) {
   revalidatePath("/", "layout");
 }
 
-export async function updateProject(formData: FormData) {
+export async function requireActiveProject() {
   const { active } = await projectContext();
+  if (!active) redirect("/onboarding");
+  return active;
+}
+
+export async function updateProject(formData: FormData) {
+  const active = await requireActiveProject();
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat mengubah project");
   const name = String(formData.get("name") || "").trim();
@@ -53,7 +59,7 @@ export async function updateProject(formData: FormData) {
 }
 
 export async function archiveProject() {
-  const { active } = await projectContext();
+  const active = await requireActiveProject();
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat mengarsipkan project");
   await db
@@ -65,6 +71,7 @@ export async function archiveProject() {
 
 export async function removeMember(userId: string) {
   const { user, active } = await projectContext();
+  if (!active) redirect("/onboarding");
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat menghapus anggota");
   if (userId === user.id)

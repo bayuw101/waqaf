@@ -9,8 +9,19 @@ export default {
   },
   callbacks: {
     authorized: async ({ auth, request }) => {
-      const publicPaths = ["/", "/privacy", "/terms", "/login", "/public"];
-      return publicPaths.includes(request.nextUrl.pathname) || !!auth?.user;
+      const { pathname } = request.nextUrl;
+      if (
+        [
+          "/",
+          "/privacy",
+          "/terms",
+          "/login",
+          "/public",
+          "/onboarding",
+        ].includes(pathname)
+      )
+        return true;
+      return !!auth?.user;
     },
   },
 } satisfies NextAuthConfig;

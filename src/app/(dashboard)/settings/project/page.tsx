@@ -6,6 +6,7 @@ import { ProjectManager } from "@/components/projects/project-manager";
 
 export default async function ProjectSettingsPage() {
   const { active } = await projectContext();
+  if (!active) return null;
   const [members, invitations] = await Promise.all([
     db
       .select({
@@ -16,8 +17,8 @@ export default async function ProjectSettingsPage() {
       })
       .from(projectMembers)
       .innerJoin(users, eq(projectMembers.userId, users.id))
-      .where(eq(projectMembers.projectId, active.project.id)),
-    active.role === "owner"
+      .where(eq(projectMembers.projectId, active!.project.id)),
+    active!.role === "owner"
       ? db
           .select({
             id: projectInvitations.id,
@@ -26,7 +27,7 @@ export default async function ProjectSettingsPage() {
           .from(projectInvitations)
           .where(
             and(
-              eq(projectInvitations.projectId, active.project.id),
+              eq(projectInvitations.projectId, active!.project.id),
               isNull(projectInvitations.claimedAt),
               isNull(projectInvitations.revokedAt),
             ),
@@ -45,7 +46,7 @@ export default async function ProjectSettingsPage() {
       </div>
       <ProjectManager
         project={active.project}
-        owner={active.role === "owner"}
+        owner={active!.role === "owner"}
         members={members}
         invitations={invitations.map((invitation) => ({
           ...invitation,
