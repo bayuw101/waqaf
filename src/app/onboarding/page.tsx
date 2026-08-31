@@ -9,7 +9,7 @@ import { createProject } from "./actions";
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; new?: string }>;
 }) {
   const user = await currentUser();
   const [membership] = await db
@@ -17,8 +17,8 @@ export default async function OnboardingPage({
     .from(projectMembers)
     .where(eq(projectMembers.userId, user.id))
     .limit(1);
-  if (membership) redirect("/");
-  const { error } = await searchParams;
+  const { error, new: createAnother } = await searchParams;
+  if (membership && !createAnother) redirect("/");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--shell)] p-4">
@@ -26,7 +26,9 @@ export default async function OnboardingPage({
         <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]">
           <FolderPlus size={21} />
         </div>
-        <h1 className="text-xl font-bold">Buat project pertama</h1>
+        <h1 className="text-xl font-bold">
+          {membership ? "Buat project baru" : "Buat project pertama"}
+        </h1>
         <p className="mt-1 text-[12px] leading-5 text-[var(--muted-foreground)]">
           Project memisahkan rekening, transaksi, anggota, dan laporan
           organisasi Anda.
