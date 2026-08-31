@@ -4,17 +4,17 @@ import {
   Check,
   ChevronDown,
   FolderKanban,
-  Link2,
   Loader2,
   Plus,
+  Send,
   Settings,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { switchProject } from "@/app/actions/projects";
 import { createInvitation } from "@/app/actions/invitations";
-import { Dialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/confirm-dialog";
 import { PendingLink } from "@/components/ui/pending-link";
 
 export function ProjectSwitcher({
@@ -26,22 +26,23 @@ export function ProjectSwitcher({
   projects: { id: string; name: string }[];
   owner: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [action, setAction] = useState<string | null>(null);
-  const [inviteLink, setInviteLink] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const router = useRouter();
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false),
+    [pending, startTransition] = useTransition(),
+    [action, setAction] = useState<string | null>(null),
+    [inviteLink, setInviteLink] = useState(""),
+    [inviteOpen, setInviteOpen] = useState(false),
+    [copied, setCopied] = useState(false);
+  const router = useRouter(),
+    pathname = usePathname(),
+    managing = pathname === "/settings/project",
+    ref = useRef<HTMLDivElement>(null),
+    selected = projects.find((project) => project.id === active)!;
   useEffect(() => {
-    const close = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
-    };
+    const close = (event: PointerEvent) =>
+      !ref.current?.contains(event.target as Node) && setOpen(false);
     document.addEventListener("pointerdown", close, true);
     return () => document.removeEventListener("pointerdown", close, true);
   }, []);
-  const selected = projects.find((project) => project.id === active)!;
   const invite = () => {
     setAction("invite");
     startTransition(async () => {
@@ -61,7 +62,7 @@ export function ProjectSwitcher({
           type="button"
           disabled={pending}
           onClick={() => setOpen((value) => !value)}
-          className="flex max-w-44 items-center gap-1.5 rounded-lg py-1 text-left text-[var(--shell-foreground)] hover:text-white disabled:opacity-60"
+          className="flex h-8 max-w-52 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-2.5 text-left text-[var(--shell-foreground)] shadow-sm transition-colors hover:border-white/20 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
         >
           {pending && action?.startsWith("switch:") ? (
             <Loader2 size={13} className="animate-spin" />
@@ -71,28 +72,68 @@ export function ProjectSwitcher({
               className="shrink-0 text-[var(--shell-muted)]"
             />
           )}
-          <span className="truncate text-[11px] font-semibold">
-            {selected.name}
+          <span className="min-w-0 flex-1">
+            <small className="block text-[8px] font-semibold uppercase leading-none tracking-wider text-[var(--shell-muted)]">
+              Project
+            </small>
+            <span className="block truncate text-[11px] font-semibold leading-tight">
+              {selected.name}
+            </span>
           </span>
           <ChevronDown
-            size={11}
-            className="shrink-0 text-[var(--shell-muted)]"
+            size={12}
+            className={`shrink-0 text-[var(--shell-muted)] transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
         {open && (
-          <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl">
-            <div className="border-b border-[var(--border)] px-3 py-2.5">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                Project aktif
-              </p>
-              <b className="block truncate text-[12px]">{selected.name}</b>
+          <div className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[var(--muted)]/60 px-3 py-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--brand)] shadow-sm">
+                <FolderKanban size={16} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[8px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                  Project aktif
+                </p>
+                <b className="block truncate text-[12px]">{selected.name}</b>
+              </div>
+              <div className="flex gap-1">
+                <PendingLink
+                  href="/settings/project"
+                  onClick={() => setOpen(false)}
+                  aria-label="Kelola project"
+                  title="Kelola project"
+                  className="flex h-8 w-8 justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] p-0 text-[var(--muted-foreground)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]"
+                >
+                  <Settings size={13} />
+                </PendingLink>
+                {owner && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={invite}
+                    aria-label="Undang anggota"
+                    title="Undang anggota"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] disabled:opacity-60"
+                  >
+                    {action === "invite" ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Send size={13} />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="p-1">
+              <p className="px-2 py-1.5 text-[8px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Project Anda
+              </p>
               {projects.map((project) => (
                 <button
                   key={project.id}
                   type="button"
-                  disabled={pending}
+                  disabled={pending || managing || project.id === active}
                   onClick={() => {
                     setAction(`switch:${project.id}`);
                     startTransition(async () => {
@@ -102,12 +143,16 @@ export function ProjectSwitcher({
                       setAction(null);
                     });
                   }}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[11px] font-medium hover:bg-[var(--muted)] disabled:opacity-60"
+                  className="group flex w-full items-center justify-between rounded-lg px-2.5 py-2.5 text-left text-[11px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--muted)] disabled:cursor-default disabled:opacity-60"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {action === `switch:${project.id}` && (
-                      <Loader2 size={12} className="animate-spin" />
-                    )}
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--muted)] text-[var(--muted-foreground)] group-hover:bg-[var(--card)]">
+                      {action === `switch:${project.id}` ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <FolderKanban size={12} />
+                      )}
+                    </span>
                     <span className="truncate">{project.name}</span>
                   </span>
                   {project.id === active && (
@@ -116,30 +161,11 @@ export function ProjectSwitcher({
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-1 border-t border-[var(--border)] p-1">
-              <PendingLink
-                href="/settings/project"
-                onClick={() => setOpen(false)}
-                className="justify-center rounded-lg px-2 py-2 text-[10px] font-semibold hover:bg-[var(--muted)]"
-              >
-                <Settings size={12} /> Kelola
-              </PendingLink>
-              {owner && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={invite}
-                  className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[10px] font-semibold hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] disabled:opacity-60"
-                >
-                  {action === "invite" ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <Link2 size={12} />
-                  )}{" "}
-                  Undang
-                </button>
-              )}
-            </div>
+            {managing && (
+              <p className="border-t border-[var(--border)] bg-[var(--warning-soft)] px-3 py-2 text-[9px] text-[var(--warning)]">
+                Selesaikan pengelolaan project sebelum berpindah.
+              </p>
+            )}
             <PendingLink
               href="/onboarding?new=1"
               onClick={() => setOpen(false)}
@@ -153,7 +179,7 @@ export function ProjectSwitcher({
       <Dialog
         open={inviteOpen}
         title="Undang anggota project"
-        description="Bagikan tautan ini. Tautan berlaku tujuh hari dan hanya dapat digunakan sekali."
+        description="Tautan berlaku tujuh hari dan hanya dapat digunakan sekali."
         onClose={() => setInviteOpen(false)}
       >
         <div className="flex gap-2">
