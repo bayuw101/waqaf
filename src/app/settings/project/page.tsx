@@ -1,18 +1,23 @@
-import { eq } from "drizzle-orm";
-import { Archive, ShieldCheck, Users } from "lucide-react";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { Archive, Link2, ShieldCheck, Users } from "lucide-react";
 import { db } from "@/db";
-import { projectMembers, users } from "@/db/schema";
+import { projectInvitations, projectMembers, users } from "@/db/schema";
 import { projectContext } from "@/lib/projects";
 import {
   archiveProject,
   removeMember,
   updateProject,
 } from "@/app/actions/projects";
+import { createInvitation, revokeInvitation } from "@/app/actions/invitations";
 
 export default async function ProjectSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    invitation?: string;
+  }>;
 }) {
   const { active } = await projectContext();
   const params = await searchParams;
@@ -27,6 +32,22 @@ export default async function ProjectSettingsPage({
     .innerJoin(users, eq(projectMembers.userId, users.id))
     .where(eq(projectMembers.projectId, active.project.id));
   const owner = active.role === "owner";
+  const invitations = owner
+    ? await db
+        .select()
+        .from(projectInvitations)
+        .where(
+          and(
+            eq(projectInvitations.projectId, active.project.id),
+            isNull(projectInvitations.claimedAt),
+            isNull(projectInvitations.revokedAt),
+          ),
+        )
+        .orderBy(desc(projectInvitations.createdAt))
+    : [];
+  const invitationUrl = params.invitation
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/invite/${params.invitation}`
+    : null;
   return (
     <div className="mx-auto max-w-3xl p-4 md:p-6">
       <div className="mb-5">
@@ -99,6 +120,58 @@ export default async function ProjectSettingsPage({
           )}
         </form>
       </section>
+      {owner && (
+        <section className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Link2 size={16} />
+              <div>
+                <h2 className="text-[13px] font-bold">Undangan anggota</h2>
+                <p className="text-[10px] text-[var(--muted-foreground)]">
+                  Tautan berlaku tujuh hari dan hanya dapat digunakan sekali.
+                </p>
+              </div>
+            </div>
+            <form action={createInvitation}>
+              <button className="rounded-lg bg-[var(--primary)] px-3 py-2 text-[10px] font-semibold text-[var(--primary-foreground)]">
+                Buat tautan
+              </button>
+            </form>
+          </div>
+          {invitationUrl && (
+            <div className="mt-3 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] p-3">
+              <p className="text-[10px] font-semibold text-[var(--brand)]">
+                Tautan baru — salin sekarang
+              </p>
+              <input
+                readOnly
+                value={invitationUrl}
+                aria-label="Tautan undangan baru"
+                className="mt-1 h-9 w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-2 text-[10px] text-[var(--foreground)]"
+              />
+            </div>
+          )}
+          {invitations.map((invitation) => (
+            <div
+              key={invitation.id}
+              className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-3"
+            >
+              <small className="text-[10px] text-[var(--muted-foreground)]">
+                Berlaku sampai{" "}
+                {new Intl.DateTimeFormat("id-ID", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(invitation.expiresAt)}
+              </small>
+              <form action={revokeInvitation.bind(null, invitation.id)}>
+                <button className="rounded-md px-2 py-1 text-[10px] font-semibold text-[var(--danger)] hover:bg-[var(--danger-soft)]">
+                  Batalkan
+                </button>
+              </form>
+            </div>
+          ))}
+        </section>
+      )}
       <section className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Users size={16} />
