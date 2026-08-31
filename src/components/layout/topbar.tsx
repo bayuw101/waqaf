@@ -10,10 +10,24 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/lib/use-theme";
-export function Topbar() {
+import { ProjectSwitcher } from "./project-switcher";
+import { logout } from "@/app/actions/session";
+import { Loader2 } from "lucide-react";
+export function Topbar({
+  user,
+  activeProject,
+  projects,
+  owner,
+}: {
+  user: { name: string; email: string };
+  activeProject: string;
+  projects: { id: string; name: string }[];
+  owner: boolean;
+}) {
   const path = usePathname(),
     { dark, toggle } = useTheme(),
     [open, setOpen] = useState(false),
+    [loggingOut, setLoggingOut] = useState(false),
     ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -24,7 +38,7 @@ export function Topbar() {
     return () => document.removeEventListener("pointerdown", h, true);
   }, []);
   const page =
-    path === "/"
+    path === "/dashboard"
       ? "Ringkasan"
       : path.split("/").filter(Boolean).at(-1) || "Ringkasan";
   return (
@@ -32,7 +46,11 @@ export function Topbar() {
       <div className="flex min-w-0 flex-1 items-center gap-2 text-[11px] text-[var(--shell-muted)]">
         <Home size={14} />
         <ChevronDown size={11} className="-rotate-90" />
-        <span className="hidden sm:inline">Yayasan Amanah</span>
+        <ProjectSwitcher
+          active={activeProject}
+          projects={projects}
+          owner={owner}
+        />
         <ChevronDown size={11} className="hidden -rotate-90 sm:block" />
         <b className="truncate font-semibold text-[var(--shell-foreground)] capitalize">
           {page}
@@ -56,11 +74,11 @@ export function Topbar() {
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--shell-hover)]"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[10px] font-bold text-[var(--brand-strong)]">
-              B
+              {user.name.slice(0, 1).toUpperCase()}
             </span>
             <span className="hidden text-left md:block">
               <b className="block text-[12px] font-medium leading-tight">
-                Bayu
+                {user.name}
               </b>
               <small className="block text-[10px] capitalize leading-tight text-[var(--shell-muted)]">
                 Bendahara
@@ -74,16 +92,21 @@ export function Topbar() {
           {open && (
             <div className="absolute right-0 top-full z-50 mt-2 w-48 divide-y divide-[var(--border)] rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 text-[var(--foreground)] shadow-lg">
               <div className="px-3 py-2.5">
-                <b className="block text-[12px] font-medium">Bayu</b>
-                <small className="text-[10px] text-[var(--muted-foreground)]">
-                  Bendahara · Akses penuh
+                <b className="block truncate text-[12px] font-medium">
+                  {user.name}
+                </b>
+                <small className="block truncate text-[10px] text-[var(--muted-foreground)]">
+                  {user.email}
                 </small>
               </div>
               <div className="py-1">
-                <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-medium hover:bg-[var(--muted)]">
+                <a
+                  href="/settings/project"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-medium hover:bg-[var(--muted)]"
+                >
                   <UserCog size={13} />
-                  Akun Saya
-                </button>
+                  Pengaturan project
+                </a>
                 <button
                   onClick={toggle}
                   className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-medium hover:bg-[var(--muted)] md:hidden"
@@ -92,10 +115,19 @@ export function Topbar() {
                   Ganti tema
                 </button>
               </div>
-              <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
-                <LogOut size={13} />
-                Keluar
-              </button>
+              <form action={logout} onSubmit={() => setLoggingOut(true)}>
+                <button
+                  disabled={loggingOut}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60"
+                >
+                  {loggingOut ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <LogOut size={13} />
+                  )}
+                  Keluar
+                </button>
+              </form>
             </div>
           )}
         </div>
