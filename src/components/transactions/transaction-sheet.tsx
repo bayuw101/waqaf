@@ -58,8 +58,8 @@ export function TransactionSheetProvider({
     { toast } = useToast();
   useEffect(() => {
     const h = () => setOpen(true);
-    window.addEventListener("amanahkas:add", h);
-    return () => window.removeEventListener("amanahkas:add", h);
+    window.addEventListener("waqaf:add", h);
+    return () => window.removeEventListener("waqaf:add", h);
   }, []);
   function update(k: string, v: string) {
     setForm((x) => ({ ...x, [k]: v }));

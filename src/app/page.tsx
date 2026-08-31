@@ -1,7 +1,5 @@
-import { DashboardPage } from "@/components/dashboard/dashboard-page";
-import { projectContext } from "@/lib/projects";
+import { HomePage } from "@/components/public-site";
 
-export default async function Page() {
-  await projectContext();
-  return <DashboardPage />;
+export default function Page() {
+  return <HomePage />;
 }

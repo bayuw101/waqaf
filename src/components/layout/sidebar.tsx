@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 const navigation = [
-  { label: "Ringkasan", href: "/", icon: LayoutDashboard },
+  { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard },
   { label: "Transaksi", href: "/transactions", icon: ArrowDownUp },
   { label: "Laporan", href: "/reports", icon: ChartNoAxesColumn },
   { label: "Transparansi", href: "/public", icon: Globe2 },
@@ -20,8 +20,8 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col items-center bg-[var(--shell)] py-4 md:flex">
       <Link
-        href="/"
-        aria-label="AmanahKas"
+        href="/dashboard"
+        aria-label="WAQAF"
         className="mb-6 flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[11px] font-bold text-[var(--brand-strong)]"
       >
         AK

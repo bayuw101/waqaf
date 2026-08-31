@@ -8,6 +8,9 @@ export default {
     error: "/login",
   },
   callbacks: {
-    authorized: async ({ auth }) => !!auth?.user,
+    authorized: async ({ auth, request }) => {
+      const publicPaths = ["/", "/privacy", "/terms", "/login", "/public"];
+      return publicPaths.includes(request.nextUrl.pathname) || !!auth?.user;
+    },
   },
 } satisfies NextAuthConfig;

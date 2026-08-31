@@ -18,7 +18,7 @@ export default async function OnboardingPage({
     .where(eq(projectMembers.userId, user.id))
     .limit(1);
   const { error, new: createAnother } = await searchParams;
-  if (membership && !createAnother) redirect("/");
+  if (membership && !createAnother) redirect("/dashboard");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--shell)] p-4">

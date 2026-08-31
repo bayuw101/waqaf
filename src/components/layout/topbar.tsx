@@ -38,7 +38,7 @@ export function Topbar({
     return () => document.removeEventListener("pointerdown", h, true);
   }, []);
   const page =
-    path === "/"
+    path === "/dashboard"
       ? "Ringkasan"
       : path.split("/").filter(Boolean).at(-1) || "Ringkasan";
   return (

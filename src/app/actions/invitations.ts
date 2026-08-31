@@ -70,5 +70,5 @@ export async function claimInvitation(token: string) {
   ]);
   if (!result.length)
     redirect(`/invite/${encodeURIComponent(token)}?error=unavailable`);
-  redirect("/");
+  redirect("/dashboard");
 }

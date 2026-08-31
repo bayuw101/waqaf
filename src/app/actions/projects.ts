@@ -60,7 +60,7 @@ export async function archiveProject() {
     .update(projects)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(eq(projects.id, active.project.id));
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function removeMember(userId: string) {

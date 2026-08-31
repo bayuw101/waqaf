@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/cn";
 import { useTransactionSheet } from "@/components/transactions/transaction-sheet";
 const nav = [
-  { label: "Ringkasan", href: "/", icon: LayoutDashboard },
+  { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard },
   { label: "Transaksi", href: "/transactions", icon: ArrowDownUp },
   { label: "Laporan", href: "/reports", icon: ChartNoAxesColumn },
   { label: "Transparansi", href: "/public", icon: Globe2 },

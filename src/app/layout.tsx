@@ -9,8 +9,23 @@ import { projectContext } from "@/lib/projects";
 import { PageTransitionLoader } from "@/components/layout/page-transition-loader";
 
 export const metadata: Metadata = {
-  title: "AmanahKas",
-  description: "Pencatatan dan transparansi keuangan",
+  metadataBase: new URL("https://waqaf.web.id"),
+  title: {
+    default: "WAQAF — Pencatatan Keuangan Organisasi",
+    template: "%s · WAQAF",
+  },
+  description:
+    "Pencatatan, pertanggungjawaban, dan transparansi keuangan untuk organisasi dan project sosial.",
+  applicationName: "WAQAF",
+  openGraph: {
+    title: "WAQAF — Pencatatan Keuangan Organisasi",
+    description:
+      "Kelola kas, transaksi, anggota, dan laporan project secara kolaboratif dan transparan.",
+    url: "https://waqaf.web.id",
+    siteName: "WAQAF",
+    type: "website",
+    locale: "id_ID",
+  },
 };
 export default async function RootLayout({
   children,

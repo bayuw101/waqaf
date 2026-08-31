@@ -20,7 +20,7 @@ export default async function LoginPage({
           <Landmark size={21} />
         </div>
         <h1 className="text-xl font-bold text-[var(--foreground)]">
-          Masuk ke AmanahKas
+          Masuk ke WAQAF
         </h1>
         <p className="mt-1 text-[12px] leading-5 text-[var(--muted-foreground)]">
           Kelola dana dan pertanggungjawaban project bersama tim Anda.
@@ -52,8 +52,8 @@ export default async function LoginPage({
             size={14}
             className="mt-0.5 shrink-0 text-[var(--success)]"
           />
-          AmanahKas hanya menggunakan Google untuk autentikasi. Kami tidak
-          menyimpan password Anda.
+          WAQAF hanya menggunakan Google untuk autentikasi. Kami tidak menyimpan
+          password Anda.
         </div>
       </section>
     </main>

@@ -54,7 +54,7 @@ export default async function InvitationPage({
               href="/"
               className="mt-6 flex h-10 items-center justify-center rounded-lg bg-[var(--primary)] text-[11px] font-semibold text-[var(--primary-foreground)]"
             >
-              Kembali ke AmanahKas
+              Kembali ke WAQAF
             </a>
           </>
         ) : (

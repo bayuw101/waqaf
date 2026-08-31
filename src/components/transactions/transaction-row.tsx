@@ -91,7 +91,8 @@ export function TransactionRow({
                 </b>
                 {parentName && (
                   <small className="flex block truncate text-[10px] text-[var(--muted-foreground)]">
-                    <Link2 className="h-3 ml-[-5px]" />{parentName}
+                    <Link2 className="h-3 ml-[-5px]" />
+                    {parentName}
                   </small>
                 )}
                 {!parentName && (
@@ -163,7 +164,8 @@ export function TransactionRow({
             </b>
             {parentName ? (
               <small className="flex block truncate text-[10px] text-[var(--muted-foreground)]">
-                <Link2 className="h-3 ml-[-5px]" />{parentName}
+                <Link2 className="h-3 ml-[-5px]" />
+                {parentName}
               </small>
             ) : (
               <small className="block truncate text-[11px] text-[var(--muted-foreground)]">

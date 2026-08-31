@@ -26,5 +26,5 @@ export async function createProject(formData: FormData) {
     ON CONFLICT (user_id) DO UPDATE
     SET active_project_id = EXCLUDED.active_project_id, updated_at = now()`,
   ]);
-  redirect("/");
+  redirect("/dashboard");
 }
