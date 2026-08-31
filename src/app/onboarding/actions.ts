@@ -1,8 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { projectMembers, projects, userPreferences } from "@/db/schema";
+import { sql } from "@/db";
 import { currentUser } from "@/lib/projects";
 
 export async function createProject(formData: FormData) {
@@ -13,23 +12,19 @@ export async function createProject(formData: FormData) {
   ).trim();
   if (!name || !organizationName) redirect("/onboarding?error=required");
 
-  await db.transaction(async (tx) => {
-    const [project] = await tx
-      .insert(projects)
-      .values({ name, organizationName })
-      .returning({ id: projects.id });
-    await tx.insert(projectMembers).values({
-      projectId: project.id,
-      userId: user.id,
-      role: "owner",
-    });
-    await tx
-      .insert(userPreferences)
-      .values({ userId: user.id, activeProjectId: project.id })
-      .onConflictDoUpdate({
-        target: userPreferences.userId,
-        set: { activeProjectId: project.id, updatedAt: new Date() },
-      });
-  });
+  await sql.transaction((tx) => [
+    tx`WITH new_project AS (
+      INSERT INTO projects (name, organization_name)
+      VALUES (${name}, ${organizationName})
+      RETURNING id
+    ), new_membership AS (
+      INSERT INTO project_members (project_id, user_id, role)
+      SELECT id, ${user.id}, 'owner'::project_role FROM new_project
+    )
+    INSERT INTO user_preferences (user_id, active_project_id)
+    SELECT ${user.id}, id FROM new_project
+    ON CONFLICT (user_id) DO UPDATE
+    SET active_project_id = EXCLUDED.active_project_id, updated_at = now()`,
+  ]);
   redirect("/");
 }

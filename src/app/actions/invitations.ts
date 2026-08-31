@@ -3,12 +3,8 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import {
-  projectInvitations,
-  projectMembers,
-  userPreferences,
-} from "@/db/schema";
+import { db, sql as neonSql } from "@/db";
+import { projectInvitations } from "@/db/schema";
 import {
   invitationExpiry,
   invitationHash,
@@ -51,34 +47,28 @@ export async function revokeInvitation(invitationId: string) {
 export async function claimInvitation(token: string) {
   const user = await currentUser();
   const hash = invitationHash(token);
-  const projectId = await db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(projectInvitations)
-      .set({ claimedAt: new Date(), claimedBy: user.id })
-      .where(
-        and(
-          eq(projectInvitations.tokenHash, hash),
-          isNull(projectInvitations.claimedAt),
-          isNull(projectInvitations.revokedAt),
-          gt(projectInvitations.expiresAt, new Date()),
-        ),
-      )
-      .returning({ projectId: projectInvitations.projectId });
-    if (!claimed) return null;
-    await tx
-      .insert(projectMembers)
-      .values({ projectId: claimed.projectId, userId: user.id, role: "member" })
-      .onConflictDoNothing();
-    await tx
-      .insert(userPreferences)
-      .values({ userId: user.id, activeProjectId: claimed.projectId })
-      .onConflictDoUpdate({
-        target: userPreferences.userId,
-        set: { activeProjectId: claimed.projectId, updatedAt: new Date() },
-      });
-    return claimed.projectId;
-  });
-  if (!projectId)
+  const [result] = await neonSql.transaction((tx) => [
+    tx`WITH claimed AS (
+      UPDATE project_invitations
+      SET claimed_at = now(), claimed_by = ${user.id}
+      WHERE token_hash = ${hash}
+        AND claimed_at IS NULL
+        AND revoked_at IS NULL
+        AND expires_at > now()
+      RETURNING project_id
+    ), membership AS (
+      INSERT INTO project_members (project_id, user_id, role)
+      SELECT project_id, ${user.id}, 'member'::project_role FROM claimed
+      ON CONFLICT DO NOTHING
+    ), preference AS (
+      INSERT INTO user_preferences (user_id, active_project_id)
+      SELECT ${user.id}, project_id FROM claimed
+      ON CONFLICT (user_id) DO UPDATE
+      SET active_project_id = EXCLUDED.active_project_id, updated_at = now()
+    )
+    SELECT project_id FROM claimed`,
+  ]);
+  if (!result.length)
     redirect(`/invite/${encodeURIComponent(token)}?error=unavailable`);
   redirect("/");
 }
