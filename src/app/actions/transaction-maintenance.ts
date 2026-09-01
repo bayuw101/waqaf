@@ -67,7 +67,7 @@ export async function correctTransaction(
   if (!Number.isSafeInteger(input.amount) || input.amount === 0)
     throw new Error("Nominal koreksi tidak valid");
   if (!input.reason.trim()) throw new Error("Alasan koreksi wajib diisi");
-  await sql.transaction((tx) => [
+  const [result] = await sql.transaction((tx) => [
     tx`WITH parent AS (
       SELECT t.*, a.id selected_account_id, a.current_balance
       FROM transactions t
@@ -94,11 +94,20 @@ export async function correctTransaction(
     )
     INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
     SELECT project_id, ${user.id}::uuid, 'transaction.corrected', 'transaction', id::text,
-      jsonb_build_object('amount', cash_effect, 'reason', ${input.reason.trim()}::text) FROM correction`,
+      jsonb_build_object('amount', cash_effect, 'reason', ${input.reason.trim()}::text) FROM correction
+    RETURNING object_id`,
   ]);
+  const correctionId = String(result[0]?.object_id || "");
+  if (!correctionId)
+    throw new Error(
+      input.account
+        ? "Koreksi gagal dicatat. Periksa saldo rekening dan coba lagi."
+        : "Rekening terdampak wajib dipilih",
+    );
   revalidatePath(`/transactions/${id}`);
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
+  return correctionId;
 }
 
 export async function cancelTransaction(id: string, reason: string) {

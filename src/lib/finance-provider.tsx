@@ -25,7 +25,7 @@ type Context = {
   accounts: { name: string; balance: number }[];
   responsibleNames: string[];
   addResponsibleName: (name: string) => void;
-  addTransaction: (t: NewTransaction) => string;
+  addTransaction: (t: NewTransaction, persistedId?: string) => string;
   recordRealization: (
     id: string,
     amount: number,
@@ -81,8 +81,8 @@ export function FinanceProvider({
   const [customResponsible, setCustomResponsible] = useState<string[]>([]);
   const get = (id: string, list = transactions) =>
     list.find((t) => t.id === id)!;
-  function addTransaction(t: NewTransaction) {
-    const id = crypto.randomUUID();
+  function addTransaction(t: NewTransaction, persistedId?: string) {
+    const id = persistedId || crypto.randomUUID();
     setTransactions((x) => [{ ...t, id }, ...x]);
     return id;
   }

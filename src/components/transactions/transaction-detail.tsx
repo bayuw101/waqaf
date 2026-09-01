@@ -44,7 +44,10 @@ export function TransactionDetail({
     ),
     [correctionAccount, setCorrectionAccount] = useState(""),
     [cancelReason, setCancelReason] = useState(""),
-    [saving, setSaving] = useState(false);
+    [savingAction, setSavingAction] = useState<
+      "edit" | "correction" | "cancel" | null
+    >(null),
+    saving = savingAction !== null;
   useEffect(() => {
     if (canonical !== id) router.replace(`/transactions/${canonical}`);
   }, [canonical, id, router]);
@@ -173,7 +176,7 @@ export function TransactionDetail({
       >
         <form
           action={async (data) => {
-            setSaving(true);
+            setSavingAction("edit");
             try {
               await updateTransactionMetadata(root.id, {
                 description: String(data.get("description") || ""),
@@ -193,7 +196,7 @@ export function TransactionDetail({
                 description: (error as Error).message,
               });
             } finally {
-              setSaving(false);
+              setSavingAction(null);
               window.dispatchEvent(new Event("waqaf:loading:end"));
             }
           }}
@@ -242,9 +245,9 @@ export function TransactionDetail({
       >
         <form
           action={async (data) => {
-            setSaving(true);
+            setSavingAction("correction");
             try {
-              await correctTransaction(root.id, {
+              const correctionId = await correctTransaction(root.id, {
                 amount:
                   (correctionAmount || 0) *
                   (correctionDirection === "in" ? 1 : -1),
@@ -253,7 +256,26 @@ export function TransactionDetail({
               });
               toast({ tone: "success", title: "Koreksi berhasil dicatat" });
               setCorrection(false);
-              location.reload();
+              finance.addTransaction(
+                {
+                  ...root,
+                  parentId: root.id,
+                  relationKind: "correction",
+                  type: correctionDirection === "in" ? "cash_in" : "cash_out",
+                  description: `Koreksi ${root.description}`,
+                  account: correctionAccount,
+                  amount: correctionAmount || 0,
+                  cashEffect:
+                    (correctionAmount || 0) *
+                    (correctionDirection === "in" ? 1 : -1),
+                  incomeEffect: 0,
+                  expenseEffect: 0,
+                  status: "closed",
+                  realizationStatus: "not_required",
+                  ref: `${root.ref}-COR`,
+                },
+                correctionId,
+              );
             } catch (error) {
               toast({
                 tone: "error",
@@ -261,7 +283,7 @@ export function TransactionDetail({
                 description: (error as Error).message,
               });
             } finally {
-              setSaving(false);
+              setSavingAction(null);
               window.dispatchEvent(new Event("waqaf:loading:end"));
             }
           }}
@@ -291,7 +313,11 @@ export function TransactionDetail({
             onChange={setCorrectionAccount}
           />
           <InputField name="reason" label="Alasan koreksi" />
-          <Button type="submit" className="w-full" loading={saving}>
+          <Button
+            type="submit"
+            className="w-full"
+            loading={savingAction === "correction"}
+          >
             Catat koreksi
           </Button>
         </form>
@@ -323,7 +349,7 @@ export function TransactionDetail({
               size="sm"
               loading={saving}
               onClick={async () => {
-                setSaving(true);
+                setSavingAction("cancel");
                 try {
                   await cancelTransaction(root.id, cancelReason);
                   toast({ tone: "success", title: "Transaksi dibatalkan" });
@@ -337,7 +363,7 @@ export function TransactionDetail({
                     description: (error as Error).message,
                   });
                 } finally {
-                  setSaving(false);
+                  setSavingAction(null);
                   window.dispatchEvent(new Event("waqaf:loading:end"));
                 }
               }}
