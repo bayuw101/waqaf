@@ -11,7 +11,12 @@ import { TransactionTimeline } from "./transaction-timeline";
 import { useTransactionFollowUp } from "./transaction-follow-up-provider";
 import { Button } from "@/components/ui/button";
 import { RowActions } from "@/components/ui/row-actions";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/confirm-dialog";
+import { InputField } from "@/components/ui/input-field";
+import {
+  cancelTransaction,
+  updateTransactionMetadata,
+} from "@/app/actions/transaction-maintenance";
 import { useToast } from "@/components/ui/toast";
 export function TransactionDetail({ id }: { id: string }) {
   const finance = useFinance(),
@@ -20,7 +25,9 @@ export function TransactionDetail({ id }: { id: string }) {
     { openFollowUp } = useTransactionFollowUp(),
     canonical = finance.canonicalId(id),
     root = finance.transactions.find((t) => t.id === canonical),
-    [cancel, setCancel] = useState(false);
+    [cancel, setCancel] = useState(false),
+    [edit, setEdit] = useState(false),
+    [saving, setSaving] = useState(false);
   useEffect(() => {
     if (canonical !== id) router.replace(`/transactions/${canonical}`);
   }, [canonical, id, router]);
@@ -42,12 +49,7 @@ export function TransactionDetail({ id }: { id: string }) {
       {
         label: "Edit metadata",
         icon: <Edit3 size={13} />,
-        onClick: () =>
-          toast({
-            tone: "info",
-            title: "Edit metadata",
-            description: "Nominal tidak diubah langsung.",
-          }),
+        onClick: () => setEdit(true),
       },
       {
         label: "Buat koreksi",
@@ -149,15 +151,100 @@ export function TransactionDetail({ id }: { id: string }) {
         </div>
         <TransactionTimeline transactions={family} />
       </section>
+      <Dialog
+        open={edit}
+        title="Edit metadata"
+        description="Nominal dan efek finansial tidak dapat diedit langsung."
+        onClose={() => setEdit(false)}
+      >
+        <form
+          action={async (data) => {
+            setSaving(true);
+            try {
+              await updateTransactionMetadata(root.id, {
+                description: String(data.get("description") || ""),
+                party: String(data.get("party") || ""),
+                responsible: String(data.get("responsible") || ""),
+                category: String(data.get("category") || ""),
+                reference: String(data.get("reference") || ""),
+                due: String(data.get("due") || "") || undefined,
+              });
+              toast({ tone: "success", title: "Metadata diperbarui" });
+              setEdit(false);
+              location.reload();
+            } catch (error) {
+              toast({
+                tone: "error",
+                title: "Gagal",
+                description: (error as Error).message,
+              });
+            } finally {
+              setSaving(false);
+              window.dispatchEvent(new Event("waqaf:loading:end"));
+            }
+          }}
+          className="space-y-3"
+        >
+          <InputField
+            name="description"
+            label="Deskripsi"
+            defaultValue={root.description}
+          />
+          <InputField
+            name="party"
+            label="Pihak terkait"
+            defaultValue={root.party}
+          />
+          <InputField
+            name="responsible"
+            label="Penanggung jawab"
+            defaultValue={root.responsible}
+          />
+          <InputField
+            name="category"
+            label="Kategori"
+            defaultValue={root.category}
+          />
+          <InputField
+            name="reference"
+            label="Nomor referensi"
+            defaultValue={root.ref}
+          />
+          <InputField
+            name="due"
+            label="Jatuh tempo"
+            defaultValue={root.due || ""}
+          />
+          <Button type="submit" className="w-full" loading={saving}>
+            Simpan metadata
+          </Button>
+        </form>
+      </Dialog>
       <ConfirmDialog
         open={cancel}
         title="Batalkan transaksi?"
-        description="Transaksi tetap berada dalam riwayat dan tidak dihapus."
+        description="Transaksi dan seluruh turunannya tetap berada dalam riwayat. Efek ledger akan dibalik."
         confirmLabel="Batalkan transaksi"
         destructive
-        onConfirm={() => {
-          finance.cancel(root.id, "Dibatalkan oleh bendahara");
-          setCancel(false);
+        loading={saving}
+        onConfirm={async () => {
+          setSaving(true);
+          try {
+            await cancelTransaction(root.id, "Dibatalkan oleh bendahara");
+            toast({ tone: "success", title: "Transaksi dibatalkan" });
+            setCancel(false);
+            router.push("/transactions");
+            router.refresh();
+          } catch (error) {
+            toast({
+              tone: "error",
+              title: "Gagal",
+              description: (error as Error).message,
+            });
+          } finally {
+            setSaving(false);
+            window.dispatchEvent(new Event("waqaf:loading:end"));
+          }
         }}
         onCancel={() => setCancel(false)}
       />
