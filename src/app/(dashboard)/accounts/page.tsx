@@ -24,16 +24,14 @@ export default async function AccountsPage() {
     .groupBy(accounts.id)
     .orderBy(accounts.name);
   return (
-    <div className="p-4 md:p-6">
-      <AccountManager
-        owner={active.role === "owner"}
-        accounts={rows.map((row) => ({
-          ...row,
-          openingBalance: row.openingBalance.toString(),
-          currentBalance: row.currentBalance.toString(),
-          reconciled: row.currentBalance === row.calculated,
-        }))}
-      />
-    </div>
+    <AccountManager
+      owner={active.role === "owner"}
+      accounts={rows.map((row) => ({
+        ...row,
+        openingBalance: row.openingBalance.toString(),
+        currentBalance: row.currentBalance.toString(),
+        reconciled: row.currentBalance === row.calculated,
+      }))}
+    />
   );
 }
