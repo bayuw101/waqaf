@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import {
   ArrowDownToLine,
   ArrowLeftRight,
@@ -7,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Link2,
+  Loader2,
   ReceiptText,
 } from "lucide-react";
 import { Transaction, rupiah } from "@/lib/finance";
@@ -54,7 +56,8 @@ export function TransactionRow({
   canonicalId?: string;
   parentName?: string;
 }) {
-  const { icon: Icon, tone } = config[transaction.type],
+  const [loading, setLoading] = useState(false),
+    { icon: Icon, tone } = config[transaction.type],
     { openFollowUp } = useTransactionFollowUp(),
     current = status || transaction.status,
     follow =
@@ -70,8 +73,15 @@ export function TransactionRow({
     <div className="relative grid grid-cols-[minmax(0,1fr)_44px] border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/50">
       <Link
         href={href}
-        className="min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand)]"
+        onClick={() => setLoading(true)}
+        aria-busy={loading || undefined}
+        className="relative min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand)]"
       >
+        {loading && (
+          <span className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--card)]/75 backdrop-blur-[1px]">
+            <Loader2 size={18} className="animate-spin text-[var(--brand)]" />
+          </span>
+        )}
         <div className="flex min-h-[88px] gap-3 px-3 py-3 md:hidden">
           <span
             className={cn(

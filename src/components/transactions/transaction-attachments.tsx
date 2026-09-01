@@ -7,7 +7,9 @@ import {
   Paperclip,
   Trash2,
   Upload,
-  X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -29,6 +31,7 @@ export function TransactionAttachments({
   const [items, setItems] = useState(initial),
     [pending, startTransition] = useTransition(),
     [action, setAction] = useState<string | null>(null),
+    [zoom, setZoom] = useState(1),
     [viewer, setViewer] = useState<{
       item: (typeof initial)[number];
       url: string;
@@ -53,9 +56,10 @@ export function TransactionAttachments({
     });
   };
   const view = (item: (typeof initial)[number]) =>
-    run(`view:${item.id}`, async () =>
-      setViewer({ item, url: await attachmentViewUrl(item.id) }),
-    );
+    run(`view:${item.id}`, async () => {
+      setZoom(1);
+      setViewer({ item, url: await attachmentViewUrl(item.id) });
+    });
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]">
       <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
@@ -188,6 +192,48 @@ export function TransactionAttachments({
         width="lg"
         onClose={() => setViewer(null)}
       >
+        {viewer && (
+          <div className="mb-3 flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--muted)] p-1.5">
+            <small className="px-2 text-[9px] text-[var(--muted-foreground)]">
+              {viewer.item.mimeType === "application/pdf"
+                ? "Gunakan toolbar PDF untuk zoom dan navigasi."
+                : "Scroll untuk pan · gunakan kontrol zoom."}
+            </small>
+            {viewer.item.mimeType !== "application/pdf" && (
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  aria-label="Zoom out"
+                  onClick={() =>
+                    setZoom((value) => Math.max(0.5, value - 0.25))
+                  }
+                  className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--card)]"
+                >
+                  <ZoomOut size={13} />
+                </button>
+                <span className="flex min-w-12 items-center justify-center text-[9px] font-semibold">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  aria-label="Zoom in"
+                  onClick={() => setZoom((value) => Math.min(4, value + 0.25))}
+                  className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--card)]"
+                >
+                  <ZoomIn size={13} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Reset zoom"
+                  onClick={() => setZoom(1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--card)]"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {viewer &&
           (viewer.item.mimeType === "application/pdf" ? (
             <iframe
@@ -196,11 +242,16 @@ export function TransactionAttachments({
               className="h-[70vh] w-full rounded-xl border border-[var(--border)] bg-white"
             />
           ) : (
-            <div className="flex max-h-[72vh] items-center justify-center overflow-auto rounded-xl bg-[var(--muted)] p-2">
+            <div className="flex h-[68vh] cursor-grab items-start justify-start overflow-auto rounded-xl bg-[var(--muted)] p-4 active:cursor-grabbing">
               <img
                 src={viewer.url}
                 alt={viewer.item.name}
-                className="max-h-[68vh] max-w-full rounded-lg object-contain shadow-lg"
+                draggable={false}
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top left",
+                }}
+                className="max-w-none select-none rounded-lg object-contain shadow-lg transition-transform duration-150"
               />
             </div>
           ))}

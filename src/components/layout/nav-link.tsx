@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Loader2, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 
 export function NavLink({
@@ -18,7 +19,10 @@ export function NavLink({
   active: boolean;
   mobile?: boolean;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false),
+    pathname = usePathname(),
+    searchParams = useSearchParams();
+  useEffect(() => setLoading(false), [pathname, searchParams]);
   return (
     <Link
       href={href}
