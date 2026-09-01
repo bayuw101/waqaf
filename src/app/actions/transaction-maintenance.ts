@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, sql } from "@/db";
-import { transactions } from "@/db/schema";
+import { accounts, transactions } from "@/db/schema";
 import { projectContext } from "@/lib/projects";
 
 async function context() {
@@ -61,28 +61,54 @@ export async function updateTransactionMetadata(
 
 export async function correctTransaction(
   id: string,
-  input: { amount: number; account: string; reason: string },
+  input: {
+    direction: "in" | "out";
+    amount: number;
+    account: string;
+    reason: string;
+  },
 ) {
   const { user, active } = await context();
-  if (!Number.isSafeInteger(input.amount) || input.amount === 0)
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0)
     throw new Error("Nominal koreksi tidak valid");
   if (!input.reason.trim()) throw new Error("Alasan koreksi wajib diisi");
+  if (!input.account) throw new Error("Rekening terdampak wajib dipilih");
+
+  const [account] = await db
+    .select({ id: accounts.id, balance: accounts.currentBalance })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.projectId, active.project.id),
+        eq(accounts.name, input.account),
+        eq(accounts.isActive, true),
+      ),
+    )
+    .limit(1);
+  if (!account) throw new Error("Rekening terdampak tidak ditemukan");
+  if (
+    input.direction === "out" &&
+    !active.project.allowNegativeBalance &&
+    account.balance < BigInt(input.amount)
+  )
+    throw new Error("Saldo rekening tidak mencukupi untuk koreksi kas keluar");
+
+  const delta = input.direction === "in" ? input.amount : -input.amount;
   const [result] = await sql.transaction((tx) => [
     tx`WITH parent AS (
       SELECT t.*, a.id selected_account_id, a.current_balance
       FROM transactions t
-      LEFT JOIN accounts a ON a.project_id = t.project_id AND a.name = ${input.account}::text AND a.is_active = true
+      LEFT JOIN accounts a ON a.project_id = t.project_id AND a.id = ${account.id}::uuid AND a.is_active = true
       WHERE t.id = ${id}::uuid AND t.project_id = ${active.project.id}::uuid AND t.cancelled_at IS NULL
     ), validated AS (
       SELECT * FROM parent WHERE selected_account_id IS NOT NULL
-        AND (${input.amount}::bigint > 0 OR ${active.project.allowNegativeBalance} OR current_balance >= abs(${input.amount}::bigint))
     ), correction AS (
       INSERT INTO transactions (project_id, parent_id, type, relation_kind, transaction_date, description,
         party, responsible, category, account_id, amount, cash_effect, income_effect, expense_effect,
         status, realization_status, reference, note, created_by, updated_by)
-      SELECT project_id, id, CASE WHEN ${input.amount}::bigint > 0 THEN 'cash_in' ELSE 'cash_out' END::transaction_type,
+      SELECT project_id, id, ${input.direction === "in" ? "cash_in" : "cash_out"}::transaction_type,
         'correction'::relation_kind, CURRENT_DATE, 'Koreksi ' || description, party, responsible,
-        category, selected_account_id, abs(${input.amount}::bigint), ${input.amount}::bigint,
+        category, selected_account_id, ${input.amount}::bigint, ${delta}::bigint,
         0, 0, 'closed', 'not_required', reference || '-COR-' || extract(epoch from now())::bigint,
         ${input.reason.trim()}::text, ${user.id}::uuid, ${user.id}::uuid FROM validated RETURNING *
     ), ledger AS (
@@ -99,11 +125,7 @@ export async function correctTransaction(
   ]);
   const correctionId = String(result[0]?.object_id || "");
   if (!correctionId)
-    throw new Error(
-      input.account
-        ? "Koreksi gagal dicatat. Periksa saldo rekening dan coba lagi."
-        : "Rekening terdampak wajib dipilih",
-    );
+    throw new Error("Transaksi induk tidak ditemukan atau sudah dibatalkan");
   revalidatePath(`/transactions/${id}`);
   revalidatePath("/transactions");
   revalidatePath("/dashboard");

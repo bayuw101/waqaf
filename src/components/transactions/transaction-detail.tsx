@@ -243,11 +243,13 @@ export function TransactionDetail({
       <Dialog
         open={correction}
         title="Buat koreksi"
-        description="Gunakan nominal positif untuk kas masuk atau nominal negatif untuk kas keluar. Koreksi dicatat sebagai transaksi terkait."
+        description="Pilih arah koreksi. Koreksi kas masuk menambah saldo; koreksi kas keluar mengurangi saldo."
         onClose={() => setCorrection(false)}
       >
         <form
-          action={async (data) => {
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
             const nextErrors: Record<string, string> = {};
             if (!correctionAmount)
               nextErrors.amount = "Nominal koreksi wajib diisi.";
@@ -263,9 +265,8 @@ export function TransactionDetail({
             setSavingAction("correction");
             try {
               const correctionId = await correctTransaction(root.id, {
-                amount:
-                  (correctionAmount || 0) *
-                  (correctionDirection === "in" ? 1 : -1),
+                direction: correctionDirection,
+                amount: correctionAmount || 0,
                 account: correctionAccount,
                 reason: String(data.get("reason") || ""),
               });
