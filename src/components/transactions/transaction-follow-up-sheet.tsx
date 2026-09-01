@@ -11,6 +11,10 @@ import { Transaction, rupiah } from "@/lib/finance";
 import { useFinance } from "@/lib/finance-provider";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
+import {
+  recordRealization as persistRealization,
+  settleTransaction,
+} from "@/app/actions/settlements";
 export function TransactionFollowUpSheet({
   transaction,
   open,
@@ -57,7 +61,7 @@ export function TransactionFollowUpSheet({
     else if (difference > 0 && contributionMode === "return")
       setContributionMode("reimburse");
   }, [difference, contributionMode, value]);
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!value) return;
     if (realize && complete && difference < 0 && !account) {
@@ -71,34 +75,28 @@ export function TransactionFollowUpSheet({
     setSaving(true);
     try {
       if (realize)
-        finance.recordRealization(
-          transaction.id,
-          value,
+        await persistRealization({
+          parentId: transaction.id,
+          amount: value,
           complete,
-          complete && difference !== 0 ? reason : undefined,
-          complete && difference !== 0
-            ? {
-                party: contributionParty,
-                responsible: contributionParty,
-                mode: contributionMode,
-                account:
-                  contributionMode === "reimburse" ||
-                  contributionMode === "return"
-                    ? account
-                    : undefined,
-              }
-            : undefined,
-        );
-      else if (transaction.type === "debt")
-        finance.payDebt(transaction.id, value, account, responsible, complete);
+          reason: complete && difference !== 0 ? reason : undefined,
+          mode: complete && difference !== 0 ? contributionMode : undefined,
+          account:
+            contributionMode === "reimburse" || contributionMode === "return"
+              ? account
+              : undefined,
+          responsible: contributionParty,
+        });
       else
-        finance.receiveReceivable(
-          transaction.id,
-          value,
+        await settleTransaction({
+          parentId: transaction.id,
+          kind:
+            transaction.type === "debt" ? "debt_payment" : "receivable_payment",
+          amount: value,
           account,
           responsible,
           complete,
-        );
+        });
       if (!realize && complete && value !== outstanding) {
         toast({
           tone: "warning",
@@ -108,6 +106,7 @@ export function TransactionFollowUpSheet({
       }
       toast({ tone: "success", title: "Transaksi diperbarui" });
       onClose();
+      location.reload();
     } catch (error) {
       toast({
         tone: "error",
@@ -116,6 +115,7 @@ export function TransactionFollowUpSheet({
       });
     } finally {
       setSaving(false);
+      window.dispatchEvent(new Event("waqaf:loading:end"));
     }
   }
   return (
