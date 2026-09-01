@@ -1,20 +1,22 @@
 "use client";
 
 import {
-  Download,
+  ExternalLink,
   FileText,
   Loader2,
   Paperclip,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import {
-  attachmentDownloadUrl,
+  attachmentViewUrl,
   deleteAttachment,
   uploadAttachment,
 } from "@/app/actions/attachments";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 
 export function TransactionAttachments({
@@ -27,6 +29,10 @@ export function TransactionAttachments({
   const [items, setItems] = useState(initial),
     [pending, startTransition] = useTransition(),
     [action, setAction] = useState<string | null>(null),
+    [viewer, setViewer] = useState<{
+      item: (typeof initial)[number];
+      url: string;
+    } | null>(null),
     input = useRef<HTMLInputElement>(null),
     { toast } = useToast();
   const run = (name: string, task: () => Promise<void>) => {
@@ -46,6 +52,10 @@ export function TransactionAttachments({
       }
     });
   };
+  const view = (item: (typeof initial)[number]) =>
+    run(`view:${item.id}`, async () =>
+      setViewer({ item, url: await attachmentViewUrl(item.id) }),
+    );
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]">
       <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
@@ -54,7 +64,7 @@ export function TransactionAttachments({
             <Paperclip size={14} /> Nota & lampiran
           </h2>
           <p className="text-[10px] text-[var(--muted-foreground)]">
-            JPEG, PNG, WebP, atau PDF · maksimal 10 MB.
+            Klik preview untuk melihat ukuran penuh tanpa download.
           </p>
         </div>
         <Button
@@ -91,67 +101,110 @@ export function TransactionAttachments({
           }}
         />
       </div>
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3 last:border-0"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--brand-soft)] text-[var(--brand)]">
-            <FileText size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <b className="block truncate text-[11px]">{item.name}</b>
-            <small className="text-[9px] text-[var(--muted-foreground)]">
-              {item.mimeType} · {(item.size / 1024).toFixed(0)} KB
-            </small>
-          </div>
-          <button
-            disabled={pending}
-            aria-label="Download lampiran"
-            onClick={() =>
-              run(`download:${item.id}`, async () => {
-                location.href = await attachmentDownloadUrl(item.id);
-              })
-            }
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
-          >
-            {action === `download:${item.id}` ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Download size={13} />
-            )}
-          </button>
-          <button
-            disabled={pending}
-            aria-label="Hapus lampiran"
-            onClick={() =>
-              run(`delete:${item.id}`, async () => {
-                await deleteAttachment(item.id);
-                setItems((current) =>
-                  current.filter((value) => value.id !== item.id),
-                );
-                toast({ tone: "success", title: "Lampiran dihapus" });
-              })
-            }
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-          >
-            {action === `delete:${item.id}` ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Trash2 size={13} />
-            )}
-          </button>
+      {items.length > 0 ? (
+        <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
+            <article
+              key={item.id}
+              className="group overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--accent)] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <button
+                type="button"
+                onClick={() => view(item)}
+                className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[var(--muted)] text-[var(--muted-foreground)]"
+              >
+                {item.mimeType.startsWith("image/") ? (
+                  <>
+                    <span className="absolute inset-0 bg-[linear-gradient(135deg,var(--brand-soft),var(--muted))]" />
+                    <FileText
+                      size={30}
+                      className="relative text-[var(--brand)]"
+                    />
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--danger-soft)] text-[var(--danger)]">
+                      <FileText size={22} />
+                    </span>
+                    <b className="mt-2 block text-[11px]">PDF</b>
+                  </div>
+                )}
+                {action === `view:${item.id}` && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">
+                    <Loader2 size={20} className="animate-spin" />
+                  </span>
+                )}
+                <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                  <ExternalLink size={12} />
+                </span>
+              </button>
+              <div className="flex items-center gap-2 p-3">
+                <div className="min-w-0 flex-1">
+                  <b className="block truncate text-[11px]">{item.name}</b>
+                  <small className="text-[9px] text-[var(--muted-foreground)]">
+                    {(item.size / 1024).toFixed(0)} KB
+                  </small>
+                </div>
+                <button
+                  disabled={pending}
+                  aria-label="Hapus lampiran"
+                  onClick={() =>
+                    run(`delete:${item.id}`, async () => {
+                      await deleteAttachment(item.id);
+                      setItems((current) =>
+                        current.filter((value) => value.id !== item.id),
+                      );
+                      setViewer(null);
+                      toast({ tone: "success", title: "Lampiran dihapus" });
+                    })
+                  }
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                >
+                  {action === `delete:${item.id}` ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
-      ))}
-      {!items.length && (
-        <div className="flex min-h-32 flex-col items-center justify-center text-center">
-          <FileText size={19} className="text-[var(--muted-foreground)]" />
-          <b className="mt-2 text-[11px]">Belum ada nota</b>
+      ) : (
+        <div className="flex min-h-36 flex-col items-center justify-center text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]">
+            <FileText size={19} />
+          </span>
+          <b className="mt-3 text-[11px]">Belum ada nota</b>
           <p className="text-[9px] text-[var(--muted-foreground)]">
             Upload bukti untuk melengkapi pertanggungjawaban.
           </p>
         </div>
       )}
+      <Dialog
+        open={!!viewer}
+        title={viewer?.item.name || "Preview lampiran"}
+        description="Tautan private ini berlaku selama lima menit."
+        width="lg"
+        onClose={() => setViewer(null)}
+      >
+        {viewer &&
+          (viewer.item.mimeType === "application/pdf" ? (
+            <iframe
+              src={viewer.url}
+              title={viewer.item.name}
+              className="h-[70vh] w-full rounded-xl border border-[var(--border)] bg-white"
+            />
+          ) : (
+            <div className="flex max-h-[72vh] items-center justify-center overflow-auto rounded-xl bg-[var(--muted)] p-2">
+              <img
+                src={viewer.url}
+                alt={viewer.item.name}
+                className="max-h-[68vh] max-w-full rounded-lg object-contain shadow-lg"
+              />
+            </div>
+          ))}
+      </Dialog>
     </section>
   );
 }

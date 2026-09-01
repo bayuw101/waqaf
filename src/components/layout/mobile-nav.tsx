@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { NavLink } from "./nav-link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,7 +8,6 @@ import {
   Globe2,
   Plus,
 } from "lucide-react";
-import { cn } from "@/lib/cn";
 import { useTransactionSheet } from "@/components/transactions/transaction-sheet";
 const nav = [
   { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard },
@@ -57,15 +56,6 @@ function Item({
   active: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "flex flex-col items-center gap-0.5 px-2 py-1.5 text-[10px]",
-        active ? "text-[var(--shell-foreground)]" : "text-[var(--shell-muted)]",
-      )}
-    >
-      <Icon size={20} />
-      {label}
-    </Link>
+    <NavLink href={href} label={label} icon={Icon} active={active} mobile />
   );
 }

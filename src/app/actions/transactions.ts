@@ -47,7 +47,7 @@ export async function createTransaction(input: CreateTransactionInput) {
       ? input.amount
       : 0;
 
-  await sql.transaction((tx) => [
+  const [result] = await sql.transaction((tx) => [
     tx`WITH source_account AS (
       SELECT id, current_balance, version FROM accounts
       WHERE project_id = ${active.project.id}::uuid AND name = ${input.account || ""}::text AND is_active = true
@@ -103,8 +103,9 @@ export async function createTransaction(input: CreateTransactionInput) {
     INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
     SELECT project_id, ${user.id}::uuid, 'transaction.created', 'transaction', id::text,
       jsonb_build_object('type', type, 'amount', amount, 'reference', reference)
-    FROM inserted`,
+    FROM inserted RETURNING object_id`,
   ]);
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
+  return String(result[0]?.object_id || "");
 }

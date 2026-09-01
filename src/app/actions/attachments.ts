@@ -89,7 +89,7 @@ export async function uploadAttachment(
   revalidatePath(`/transactions/${transactionId}`);
 }
 
-export async function attachmentDownloadUrl(attachmentId: string) {
+export async function attachmentViewUrl(attachmentId: string) {
   const value = await projectContext();
   if (!value.active) redirect("/onboarding");
   const [attachment] = await db
@@ -110,7 +110,8 @@ export async function attachmentDownloadUrl(attachmentId: string) {
     new GetObjectCommand({
       Bucket: bucket,
       Key: attachment.objectKey,
-      ResponseContentDisposition: `attachment; filename="${attachment.originalName.replace(/["\r\n]/g, "")}"`,
+      ResponseContentType: attachment.mimeType,
+      ResponseContentDisposition: `inline; filename="${attachment.originalName.replace(/["\r\n]/g, "")}"`,
     }),
     { expiresIn: 300 },
   );
@@ -131,16 +132,14 @@ export async function deleteAttachment(attachmentId: string) {
     )
     .returning();
   if (!attachment) throw new Error("Lampiran tidak ditemukan");
-  await db
-    .insert(auditLogs)
-    .values({
-      projectId: value.active.project.id,
-      actorId: value.user.id,
-      action: "attachment.deleted",
-      objectType: "attachment",
-      objectId: attachment.id,
-      summary: { name: attachment.originalName },
-    });
+  await db.insert(auditLogs).values({
+    projectId: value.active.project.id,
+    actorId: value.user.id,
+    action: "attachment.deleted",
+    objectType: "attachment",
+    objectId: attachment.id,
+    summary: { name: attachment.originalName },
+  });
   const { client, bucket } = r2Config();
   void client
     .send(

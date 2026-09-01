@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowLeftRight,
@@ -20,6 +20,8 @@ import { useFinance } from "@/lib/finance-provider";
 import { TransactionType, effects } from "@/lib/finance";
 import { useToast } from "@/components/ui/toast";
 import { createTransaction } from "@/app/actions/transactions";
+import { uploadAttachment } from "@/app/actions/attachments";
+import { Paperclip, X } from "lucide-react";
 type CreateType = TransactionType;
 const tabs: { type: CreateType; label: string; icon: typeof Clock3 }[] = [
   { type: "cash_in", label: "Kas masuk", icon: ArrowDownToLine },
@@ -51,7 +53,9 @@ export function TransactionSheetProvider({
     }),
     [amount, setAmount] = useState<number | null>(null),
     [saving, setSaving] = useState(false),
-    [errors, setErrors] = useState<Record<string, string>>({});
+    [attachment, setAttachment] = useState<File | null>(null),
+    [errors, setErrors] = useState<Record<string, string>>({}),
+    attachmentRef = useRef<HTMLInputElement>(null);
   const finance = useFinance(),
     accounts = finance.accountNames.map((name) => ({
       value: name,
@@ -118,7 +122,7 @@ export function TransactionSheetProvider({
         note: form.notes || undefined,
         ...effects(type, nominal, undefined, realization),
       } as const;
-      await createTransaction({
+      const transactionId = await createTransaction({
         type,
         date: form.date,
         description: form.notes || tabs.find((x) => x.type === type)!.label,
@@ -134,10 +138,19 @@ export function TransactionSheetProvider({
         due: form.due || undefined,
         note: form.notes || undefined,
       });
-      finance.addTransaction(optimisticTransaction);
+      if (attachment && transactionId) {
+        const attachmentData = new FormData();
+        attachmentData.set("file", attachment);
+        await uploadAttachment(transactionId, attachmentData);
+      }
+      finance.addTransaction({
+        ...optimisticTransaction,
+        id: transactionId,
+      } as never);
       setOpen(false);
       setForm({ date: "2026-08-25", realization: "realized" });
       setAmount(null);
+      setAttachment(null);
       toast({ tone: "success", title: "Transaksi tersimpan" });
     } catch (error) {
       toast({
@@ -227,6 +240,46 @@ export function TransactionSheetProvider({
               new Set(finance.transactions.map((t) => t.category)),
             )}
           />
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--accent)] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <b className="block text-[11px]">Nota transaksi</b>
+                <p className="text-[9px] text-[var(--muted-foreground)]">
+                  JPEG, PNG, WebP, atau PDF · maksimal 10 MB.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => attachmentRef.current?.click()}
+              >
+                <Paperclip size={13} /> {attachment ? "Ganti" : "Pilih nota"}
+              </Button>
+              <input
+                ref={attachmentRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                onChange={(event) =>
+                  setAttachment(event.target.files?.[0] || null)
+                }
+              />
+            </div>
+            {attachment && (
+              <div className="mt-2 flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 py-2 text-[10px]">
+                <span className="truncate">{attachment.name}</span>
+                <button
+                  type="button"
+                  aria-label="Hapus nota"
+                  onClick={() => setAttachment(null)}
+                  className="text-[var(--muted-foreground)] hover:text-[var(--danger)]"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-3">
             <Button
               type="button"
