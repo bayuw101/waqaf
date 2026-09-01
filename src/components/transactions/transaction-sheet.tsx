@@ -17,8 +17,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { useFinance } from "@/lib/finance-provider";
-import { TransactionType, effects } from "@/lib/finance";
+import { TransactionType } from "@/lib/finance";
 import { useToast } from "@/components/ui/toast";
+import { createTransaction } from "@/app/actions/transactions";
 type CreateType = TransactionType;
 const tabs: { type: CreateType; label: string; icon: typeof Clock3 }[] = [
   { type: "cash_in", label: "Kas masuk", icon: ArrowDownToLine },
@@ -65,7 +66,7 @@ export function TransactionSheetProvider({
     setForm((x) => ({ ...x, [k]: v }));
     setErrors((x) => ({ ...x, [k]: "" }));
   }
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const required =
         type === "transfer"
@@ -84,19 +85,19 @@ export function TransactionSheetProvider({
       return;
     }
     setSaving(true);
-    setTimeout(() => {
-      const nominal = amount || 0,
-        realization =
-          type === "cash_out" && form.realization === "pending"
-            ? "pending"
-            : type === "cash_out"
-              ? "realized"
-              : "not_required",
-        status =
-          type === "debt" || type === "receivable" || realization === "pending"
-            ? "open"
-            : "closed";
-      finance.addTransaction({
+    const nominal = amount || 0,
+      realization =
+        type === "cash_out" && form.realization === "pending"
+          ? "pending"
+          : type === "cash_out"
+            ? "realized"
+            : "not_required",
+      status =
+        type === "debt" || type === "receivable" || realization === "pending"
+          ? "open"
+          : "closed";
+    try {
+      await createTransaction({
         type,
         date: form.date,
         description: form.notes || tabs.find((x) => x.type === type)!.label,
@@ -108,19 +109,25 @@ export function TransactionSheetProvider({
         amount: nominal,
         status,
         realizationStatus: realization,
-        realizedAmount: realization === "realized" ? nominal : undefined,
-        parentId: undefined,
-        relationKind: undefined,
-        ref: form.ref || `TRX-${Date.now()}`,
+        reference: form.ref || `TRX-${Date.now()}`,
         due: form.due || undefined,
-        ...effects(type, nominal, undefined, realization),
+        note: form.notes || undefined,
       });
-      setSaving(false);
       setOpen(false);
       setForm({ date: "2026-08-25", realization: "realized" });
       setAmount(null);
       toast({ tone: "success", title: "Transaksi tersimpan" });
-    }, 250);
+      location.reload();
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Gagal menyimpan",
+        description: (error as Error).message,
+      });
+    } finally {
+      setSaving(false);
+      window.dispatchEvent(new Event("waqaf:loading:end"));
+    }
   }
   return (
     <Context.Provider value={{ open: () => setOpen(true) }}>

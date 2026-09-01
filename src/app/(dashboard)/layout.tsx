@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/lib/use-theme";
 import { FinanceProvider } from "@/lib/finance-provider";
 import { projectContext } from "@/lib/projects";
+import { projectTransactions } from "@/lib/transaction-data";
 
 export default async function DashboardLayout({
   children,
@@ -13,11 +14,12 @@ export default async function DashboardLayout({
   const context = await projectContext();
   if (!context.active) redirect("/onboarding");
   const active = context.active;
+  const transactions = await projectTransactions(active.project.id);
 
   return (
     <ThemeProvider>
       <ToastProvider>
-        <FinanceProvider>
+        <FinanceProvider initialTransactions={transactions}>
           <AppShell
             user={{
               name: context.user.name || context.user.email,

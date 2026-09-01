@@ -64,8 +64,14 @@ type Context = {
   ) => void;
 };
 const FinanceContext = createContext<Context | null>(null);
-export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [transactions, setTransactions] = useState(seedTransactions);
+export function FinanceProvider({
+  children,
+  initialTransactions = seedTransactions,
+}: {
+  children: React.ReactNode;
+  initialTransactions?: Transaction[];
+}) {
+  const [transactions, setTransactions] = useState(initialTransactions);
   const [customResponsible, setCustomResponsible] = useState<string[]>([]);
   const get = (id: string, list = transactions) =>
     list.find((t) => t.id === id)!;
