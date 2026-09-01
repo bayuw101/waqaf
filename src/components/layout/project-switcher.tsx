@@ -54,6 +54,7 @@ export function ProjectSwitcher({
         setInviteOpen(true);
       } finally {
         setAction(null);
+        window.dispatchEvent(new Event("waqaf:loading:end"));
       }
     });
   };
@@ -70,10 +71,7 @@ export function ProjectSwitcher({
             {pending && action?.startsWith("switch:") ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Home
-                size={13}
-                className="shrink-0 text-[var(--shell-muted)]"
-              />
+              <Home size={13} className="shrink-0 text-[var(--shell-muted)]" />
             )}
           </div>
           <span className="min-w-0 flex-1">
@@ -145,6 +143,7 @@ export function ProjectSwitcher({
                       setOpen(false);
                       router.refresh();
                       setAction(null);
+                      window.dispatchEvent(new Event("waqaf:loading:end"));
                     });
                   }}
                   className="group flex w-full items-center justify-between rounded-lg px-2.5 py-2.5 text-left text-[11px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--muted)] disabled:cursor-default disabled:opacity-60"

@@ -75,6 +75,7 @@ export function AccountManager({
         });
       } finally {
         setAction(null);
+        window.dispatchEvent(new Event("waqaf:loading:end"));
       }
     });
   };

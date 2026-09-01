@@ -14,16 +14,26 @@ export function PageTransitionLoader() {
 
   useEffect(() => {
     const start = (event: MouseEvent) => {
-      const link = (event.target as Element).closest("a[href]");
+      const element = event.target as Element;
+      const link = element.closest("a[href]");
+      const submit = element.closest(
+        'button[type="submit"], input[type="submit"]',
+      );
       if (
-        link &&
-        new URL(link.getAttribute("href")!, location.href).origin ===
-          location.origin
+        submit ||
+        (link &&
+          new URL(link.getAttribute("href")!, location.href).origin ===
+            location.origin)
       )
         setLoading(true);
     };
+    const finish = () => setLoading(false);
     document.addEventListener("click", start);
-    return () => document.removeEventListener("click", start);
+    window.addEventListener("waqaf:loading:end", finish);
+    return () => {
+      document.removeEventListener("click", start);
+      window.removeEventListener("waqaf:loading:end", finish);
+    };
   }, []);
 
   if (!loading) return null;

@@ -75,6 +75,7 @@ export function ProjectManager({
         });
       } finally {
         setAction(null);
+        window.dispatchEvent(new Event("waqaf:loading:end"));
       }
     });
   };
