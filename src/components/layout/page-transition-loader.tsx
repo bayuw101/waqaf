@@ -16,14 +16,10 @@ export function PageTransitionLoader() {
     const start = (event: MouseEvent) => {
       const element = event.target as Element;
       const link = element.closest("a[href]");
-      const submit = element.closest(
-        'button[type="submit"], input[type="submit"]',
-      );
       if (
-        submit ||
-        (link &&
-          new URL(link.getAttribute("href")!, location.href).origin ===
-            location.origin)
+        link &&
+        new URL(link.getAttribute("href")!, location.href).origin ===
+          location.origin
       )
         setLoading(true);
     };

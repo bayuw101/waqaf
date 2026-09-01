@@ -43,6 +43,9 @@ export function TransactionDetail({
       "in",
     ),
     [correctionAccount, setCorrectionAccount] = useState(""),
+    [correctionErrors, setCorrectionErrors] = useState<Record<string, string>>(
+      {},
+    ),
     [cancelReason, setCancelReason] = useState(""),
     [savingAction, setSavingAction] = useState<
       "edit" | "correction" | "cancel" | null
@@ -245,6 +248,18 @@ export function TransactionDetail({
       >
         <form
           action={async (data) => {
+            const nextErrors: Record<string, string> = {};
+            if (!correctionAmount)
+              nextErrors.amount = "Nominal koreksi wajib diisi.";
+            if (!correctionAccount)
+              nextErrors.account = "Rekening terdampak wajib dipilih.";
+            if (!String(data.get("reason") || "").trim())
+              nextErrors.reason = "Alasan koreksi wajib diisi.";
+            if (Object.keys(nextErrors).length) {
+              setCorrectionErrors(nextErrors);
+              return;
+            }
+            setCorrectionErrors({});
             setSavingAction("correction");
             try {
               const correctionId = await correctTransaction(root.id, {
@@ -277,10 +292,12 @@ export function TransactionDetail({
                 correctionId,
               );
             } catch (error) {
+              const message = (error as Error).message;
+              setCorrectionErrors({ form: message });
               toast({
                 tone: "error",
-                title: "Gagal",
-                description: (error as Error).message,
+                title: "Koreksi gagal",
+                description: message,
               });
             } finally {
               setSavingAction(null);
@@ -289,6 +306,14 @@ export function TransactionDetail({
           }}
           className="space-y-3"
         >
+          {correctionErrors.form && (
+            <div
+              role="alert"
+              className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-[11px] font-medium text-[var(--danger)]"
+            >
+              {correctionErrors.form}
+            </div>
+          )}
           <SelectField
             label="Arah koreksi"
             value={correctionDirection}
@@ -301,18 +326,45 @@ export function TransactionDetail({
           <MoneyField
             label="Nominal koreksi"
             value={correctionAmount}
-            onValueChange={setCorrectionAmount}
+            error={correctionErrors.amount}
+            onValueChange={(value) => {
+              setCorrectionAmount(value);
+              setCorrectionErrors((errors) => ({
+                ...errors,
+                amount: "",
+                form: "",
+              }));
+            }}
           />
           <SelectField
             label="Rekening terdampak"
             value={correctionAccount}
+            error={correctionErrors.account}
             options={finance.accountNames.map((name) => ({
               value: name,
               label: name,
             }))}
-            onChange={setCorrectionAccount}
+            onChange={(value) => {
+              setCorrectionAccount(value);
+              setCorrectionErrors((errors) => ({
+                ...errors,
+                account: "",
+                form: "",
+              }));
+            }}
           />
-          <InputField name="reason" label="Alasan koreksi" />
+          <InputField
+            name="reason"
+            label="Alasan koreksi"
+            error={correctionErrors.reason}
+            onChange={() =>
+              setCorrectionErrors((errors) => ({
+                ...errors,
+                reason: "",
+                form: "",
+              }))
+            }
+          />
           <Button
             type="submit"
             className="w-full"
