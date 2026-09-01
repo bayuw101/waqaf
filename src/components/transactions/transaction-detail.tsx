@@ -11,10 +11,13 @@ import { TransactionTimeline } from "./transaction-timeline";
 import { useTransactionFollowUp } from "./transaction-follow-up-provider";
 import { Button } from "@/components/ui/button";
 import { RowActions } from "@/components/ui/row-actions";
-import { ConfirmDialog, Dialog } from "@/components/ui/confirm-dialog";
+import { Dialog } from "@/components/ui/confirm-dialog";
 import { InputField } from "@/components/ui/input-field";
+import { MoneyField } from "@/components/ui/money-field";
+import { SelectField } from "@/components/ui/select-field";
 import {
   cancelTransaction,
+  correctTransaction,
   updateTransactionMetadata,
 } from "@/app/actions/transaction-maintenance";
 import { useToast } from "@/components/ui/toast";
@@ -34,6 +37,13 @@ export function TransactionDetail({
     root = finance.transactions.find((t) => t.id === canonical),
     [cancel, setCancel] = useState(false),
     [edit, setEdit] = useState(false),
+    [correction, setCorrection] = useState(false),
+    [correctionAmount, setCorrectionAmount] = useState<number | null>(null),
+    [correctionDirection, setCorrectionDirection] = useState<"in" | "out">(
+      "in",
+    ),
+    [correctionAccount, setCorrectionAccount] = useState(""),
+    [cancelReason, setCancelReason] = useState(""),
     [saving, setSaving] = useState(false);
   useEffect(() => {
     if (canonical !== id) router.replace(`/transactions/${canonical}`);
@@ -61,11 +71,7 @@ export function TransactionDetail({
       {
         label: "Buat koreksi",
         icon: <RefreshCcw size={13} />,
-        onClick: () =>
-          toast({
-            tone: "info",
-            title: "Koreksi dicatat sebagai transaksi terkait.",
-          }),
+        onClick: () => setCorrection(true),
       },
       {
         label: "Batalkan transaksi",
@@ -228,34 +234,119 @@ export function TransactionDetail({
           </Button>
         </form>
       </Dialog>
-      <ConfirmDialog
+      <Dialog
+        open={correction}
+        title="Buat koreksi"
+        description="Gunakan nominal positif untuk kas masuk atau nominal negatif untuk kas keluar. Koreksi dicatat sebagai transaksi terkait."
+        onClose={() => setCorrection(false)}
+      >
+        <form
+          action={async (data) => {
+            setSaving(true);
+            try {
+              await correctTransaction(root.id, {
+                amount:
+                  (correctionAmount || 0) *
+                  (correctionDirection === "in" ? 1 : -1),
+                account: correctionAccount,
+                reason: String(data.get("reason") || ""),
+              });
+              toast({ tone: "success", title: "Koreksi berhasil dicatat" });
+              setCorrection(false);
+              location.reload();
+            } catch (error) {
+              toast({
+                tone: "error",
+                title: "Gagal",
+                description: (error as Error).message,
+              });
+            } finally {
+              setSaving(false);
+              window.dispatchEvent(new Event("waqaf:loading:end"));
+            }
+          }}
+          className="space-y-3"
+        >
+          <SelectField
+            label="Arah koreksi"
+            value={correctionDirection}
+            options={[
+              { value: "in", label: "Kas masuk" },
+              { value: "out", label: "Kas keluar" },
+            ]}
+            onChange={(value) => setCorrectionDirection(value as "in" | "out")}
+          />
+          <MoneyField
+            label="Nominal koreksi"
+            value={correctionAmount}
+            onValueChange={setCorrectionAmount}
+          />
+          <SelectField
+            label="Rekening terdampak"
+            value={correctionAccount}
+            options={finance.accountNames.map((name) => ({
+              value: name,
+              label: name,
+            }))}
+            onChange={setCorrectionAccount}
+          />
+          <InputField name="reason" label="Alasan koreksi" />
+          <Button type="submit" className="w-full" loading={saving}>
+            Catat koreksi
+          </Button>
+        </form>
+      </Dialog>
+      <Dialog
         open={cancel}
-        title="Batalkan transaksi?"
-        description="Transaksi dan seluruh turunannya tetap berada dalam riwayat. Efek ledger akan dibalik."
-        confirmLabel="Batalkan transaksi"
-        destructive
-        loading={saving}
-        onConfirm={async () => {
-          setSaving(true);
-          try {
-            await cancelTransaction(root.id, "Dibatalkan oleh bendahara");
-            toast({ tone: "success", title: "Transaksi dibatalkan" });
-            setCancel(false);
-            router.push("/transactions");
-            router.refresh();
-          } catch (error) {
-            toast({
-              tone: "error",
-              title: "Gagal",
-              description: (error as Error).message,
-            });
-          } finally {
-            setSaving(false);
-            window.dispatchEvent(new Event("waqaf:loading:end"));
-          }
-        }}
-        onCancel={() => setCancel(false)}
-      />
+        title="Batalkan transaksi"
+        description="Transaksi dan turunannya tetap berada dalam riwayat. Seluruh efek ledger akan dibalik."
+        onClose={() => setCancel(false)}
+      >
+        <div className="space-y-3">
+          <InputField
+            label="Alasan pembatalan"
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            helperText="Wajib diisi untuk audit trail."
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={saving}
+              onClick={() => setCancel(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await cancelTransaction(root.id, cancelReason);
+                  toast({ tone: "success", title: "Transaksi dibatalkan" });
+                  setCancel(false);
+                  router.push("/transactions");
+                  router.refresh();
+                } catch (error) {
+                  toast({
+                    tone: "error",
+                    title: "Gagal",
+                    description: (error as Error).message,
+                  });
+                } finally {
+                  setSaving(false);
+                  window.dispatchEvent(new Event("waqaf:loading:end"));
+                }
+              }}
+            >
+              Batalkan transaksi
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </PageShell>
   );
 }

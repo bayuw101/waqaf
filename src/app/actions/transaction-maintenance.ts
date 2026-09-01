@@ -59,6 +59,48 @@ export async function updateTransactionMetadata(
   revalidatePath("/transactions");
 }
 
+export async function correctTransaction(
+  id: string,
+  input: { amount: number; account: string; reason: string },
+) {
+  const { user, active } = await context();
+  if (!Number.isSafeInteger(input.amount) || input.amount === 0)
+    throw new Error("Nominal koreksi tidak valid");
+  if (!input.reason.trim()) throw new Error("Alasan koreksi wajib diisi");
+  await sql.transaction((tx) => [
+    tx`WITH parent AS (
+      SELECT t.*, a.id selected_account_id, a.current_balance
+      FROM transactions t
+      LEFT JOIN accounts a ON a.project_id = t.project_id AND a.name = ${input.account}::text AND a.is_active = true
+      WHERE t.id = ${id}::uuid AND t.project_id = ${active.project.id}::uuid AND t.cancelled_at IS NULL
+    ), validated AS (
+      SELECT * FROM parent WHERE selected_account_id IS NOT NULL
+        AND (${input.amount}::bigint > 0 OR ${active.project.allowNegativeBalance} OR current_balance >= abs(${input.amount}::bigint))
+    ), correction AS (
+      INSERT INTO transactions (project_id, parent_id, type, relation_kind, transaction_date, description,
+        party, responsible, category, account_id, amount, cash_effect, income_effect, expense_effect,
+        status, realization_status, reference, note, created_by, updated_by)
+      SELECT project_id, id, CASE WHEN ${input.amount}::bigint > 0 THEN 'cash_in' ELSE 'cash_out' END::transaction_type,
+        'correction'::relation_kind, CURRENT_DATE, 'Koreksi ' || description, party, responsible,
+        category, selected_account_id, abs(${input.amount}::bigint), ${input.amount}::bigint,
+        0, 0, 'closed', 'not_required', reference || '-COR-' || extract(epoch from now())::bigint,
+        ${input.reason.trim()}::text, ${user.id}::uuid, ${user.id}::uuid FROM validated RETURNING *
+    ), ledger AS (
+      INSERT INTO ledger_entries (project_id, transaction_id, account_id, amount)
+      SELECT project_id, id, account_id, cash_effect FROM correction
+    ), balance AS (
+      UPDATE accounts a SET current_balance = a.current_balance + c.cash_effect,
+        version = a.version + 1, updated_at = now() FROM correction c WHERE a.id = c.account_id RETURNING a.id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT project_id, ${user.id}::uuid, 'transaction.corrected', 'transaction', id::text,
+      jsonb_build_object('amount', cash_effect, 'reason', ${input.reason.trim()}::text) FROM correction`,
+  ]);
+  revalidatePath(`/transactions/${id}`);
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+}
+
 export async function cancelTransaction(id: string, reason: string) {
   const { user, active } = await context();
   const cleanReason = reason.trim();
