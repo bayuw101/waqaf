@@ -8,6 +8,7 @@ import {
   Globe2,
   Settings,
   Landmark,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 const navigation = [
@@ -15,6 +16,7 @@ const navigation = [
   { label: "Transaksi", href: "/transactions", icon: ArrowDownUp },
   { label: "Rekening", href: "/accounts", icon: Landmark },
   { label: "Laporan", href: "/reports", icon: ChartNoAxesColumn },
+  { label: "Aktivitas", href: "/activity", icon: Activity },
   { label: "Transparansi", href: "/public", icon: Globe2 },
 ];
 export function Sidebar() {

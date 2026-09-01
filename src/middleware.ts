@@ -4,6 +4,8 @@ const publicPaths = new Set(["/", "/login", "/privacy", "/terms", "/public"]);
 const protectedPrefixes = [
   "/dashboard",
   "/transactions",
+  "/accounts",
+  "/activity",
   "/reports",
   "/settings",
 ];
