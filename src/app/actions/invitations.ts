@@ -1,14 +1,10 @@
 "use server";
 
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import {
-  projectInvitations,
-  projectMembers,
-  userPreferences,
-} from "@/db/schema";
+import { db, sql } from "@/db";
+import { projectInvitations } from "@/db/schema";
 import {
   invitationExpiry,
   invitationHash,
@@ -21,70 +17,62 @@ export async function createInvitation() {
   if (!active) redirect("/onboarding");
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat mengundang anggota");
-  const token = newInvitationToken();
-  await db.insert(projectInvitations).values({
-    projectId: active.project.id,
-    tokenHash: invitationHash(token),
-    createdBy: user.id,
-    expiresAt: invitationExpiry(),
-  });
+  const token = newInvitationToken(),
+    tokenHash = invitationHash(token),
+    expiresAt = invitationExpiry();
+  await sql.transaction((tx) => [
+    tx`WITH created AS (
+      INSERT INTO project_invitations (project_id, token_hash, created_by, expires_at)
+      VALUES (${active.project.id}::uuid, ${tokenHash}::text, ${user.id}::uuid, ${expiresAt}::timestamptz)
+      RETURNING id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT ${active.project.id}::uuid, ${user.id}::uuid, 'invitation.created', 'invitation', id::text,
+      jsonb_build_object('expiresAt', ${expiresAt.toISOString()}::text) FROM created`,
+  ]);
   return `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
 }
 
 export async function revokeInvitation(invitationId: string) {
-  const { active } = await projectContext();
+  const { user, active } = await projectContext();
   if (!active) redirect("/onboarding");
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat membatalkan undangan");
-  await db
-    .update(projectInvitations)
-    .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(projectInvitations.id, invitationId),
-        eq(projectInvitations.projectId, active.project.id),
-        isNull(projectInvitations.claimedAt),
-        isNull(projectInvitations.revokedAt),
-      ),
-    );
+  await sql.transaction((tx) => [
+    tx`WITH revoked AS (
+      UPDATE project_invitations SET revoked_at = now()
+      WHERE id = ${invitationId}::uuid AND project_id = ${active.project.id}::uuid
+        AND claimed_at IS NULL AND revoked_at IS NULL RETURNING id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT ${active.project.id}::uuid, ${user.id}::uuid, 'invitation.revoked', 'invitation', id::text,
+      '{}'::jsonb FROM revoked`,
+  ]);
   revalidatePath("/settings/project");
 }
 
 export async function claimInvitation(token: string) {
-  const user = await currentUser();
-  const hash = invitationHash(token);
-  const projectId = await db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(projectInvitations)
-      .set({ claimedAt: new Date(), claimedBy: user.id })
-      .where(
-        and(
-          eq(projectInvitations.tokenHash, hash),
-          isNull(projectInvitations.claimedAt),
-          isNull(projectInvitations.revokedAt),
-          gt(projectInvitations.expiresAt, new Date()),
-        ),
-      )
-      .returning({ projectId: projectInvitations.projectId });
-    if (!claimed) return null;
-    await tx
-      .insert(projectMembers)
-      .values({
-        projectId: claimed.projectId,
-        userId: user.id,
-        role: "member",
-      })
-      .onConflictDoNothing();
-    await tx
-      .insert(userPreferences)
-      .values({ userId: user.id, activeProjectId: claimed.projectId })
-      .onConflictDoUpdate({
-        target: userPreferences.userId,
-        set: { activeProjectId: claimed.projectId, updatedAt: new Date() },
-      });
-    return claimed.projectId;
-  });
-  if (!projectId)
+  const user = await currentUser(),
+    hash = invitationHash(token);
+  const [result] = await sql.transaction((tx) => [
+    tx`WITH claimed AS (
+      UPDATE project_invitations SET claimed_at = now(), claimed_by = ${user.id}::uuid
+      WHERE token_hash = ${hash}::text AND claimed_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+      RETURNING id, project_id
+    ), membership AS (
+      INSERT INTO project_members (project_id, user_id, role)
+      SELECT project_id, ${user.id}::uuid, 'member'::project_role FROM claimed ON CONFLICT DO NOTHING
+    ), preference AS (
+      INSERT INTO user_preferences (user_id, active_project_id)
+      SELECT ${user.id}::uuid, project_id FROM claimed
+      ON CONFLICT (user_id) DO UPDATE SET active_project_id = EXCLUDED.active_project_id, updated_at = now()
+    ), audit AS (
+      INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+      SELECT project_id, ${user.id}::uuid, 'invitation.claimed', 'invitation', id::text, '{}'::jsonb FROM claimed
+    )
+    SELECT project_id FROM claimed`,
+  ]);
+  if (!result.length)
     redirect(`/invite/${encodeURIComponent(token)}?error=unavailable`);
   redirect("/dashboard");
 }

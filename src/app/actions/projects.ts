@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
+import { db, sql } from "@/db";
 import { projectMembers, projects, userPreferences } from "@/db/schema";
 import { currentUser, projectContext } from "@/lib/projects";
 
@@ -37,7 +37,8 @@ export async function requireActiveProject() {
 }
 
 export async function updateProject(formData: FormData) {
-  const active = await requireActiveProject();
+  const { user, active } = await projectContext();
+  if (!active) redirect("/onboarding");
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat mengubah project");
   const name = String(formData.get("name") || "").trim();
@@ -45,27 +46,35 @@ export async function updateProject(formData: FormData) {
     formData.get("organizationName") || "",
   ).trim();
   if (!name || !organizationName) redirect("/settings/project?error=required");
-  await db
-    .update(projects)
-    .set({
-      name,
-      organizationName,
-      allowNegativeBalance: formData.get("allowNegativeBalance") === "on",
-      updatedAt: new Date(),
-    })
-    .where(eq(projects.id, active.project.id));
+  const allowNegative = formData.get("allowNegativeBalance") === "on";
+  await sql.transaction((tx) => [
+    tx`WITH updated AS (
+      UPDATE projects SET name = ${name}::text, organization_name = ${organizationName}::text,
+        allow_negative_balance = ${allowNegative}, updated_at = now()
+      WHERE id = ${active.project.id}::uuid RETURNING id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT id, ${user.id}::uuid, 'project.updated', 'project', id::text,
+      jsonb_build_object('name', ${name}::text, 'organizationName', ${organizationName}::text,
+        'allowNegativeBalance', ${allowNegative}) FROM updated`,
+  ]);
   revalidatePath("/", "layout");
   redirect("/settings/project?saved=1");
 }
 
 export async function archiveProject() {
-  const active = await requireActiveProject();
+  const { user, active } = await projectContext();
+  if (!active) redirect("/onboarding");
   if (active.role !== "owner")
     throw new Error("Hanya owner yang dapat mengarsipkan project");
-  await db
-    .update(projects)
-    .set({ archivedAt: new Date(), updatedAt: new Date() })
-    .where(eq(projects.id, active.project.id));
+  await sql.transaction((tx) => [
+    tx`WITH archived AS (
+      UPDATE projects SET archived_at = now(), updated_at = now()
+      WHERE id = ${active.project.id}::uuid RETURNING id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT id, ${user.id}::uuid, 'project.archived', 'project', id::text, '{}'::jsonb FROM archived`,
+  ]);
   redirect("/dashboard");
 }
 
@@ -76,14 +85,14 @@ export async function removeMember(userId: string) {
     throw new Error("Hanya owner yang dapat menghapus anggota");
   if (userId === user.id)
     throw new Error("Owner tidak dapat menghapus dirinya sendiri");
-  await db
-    .delete(projectMembers)
-    .where(
-      and(
-        eq(projectMembers.projectId, active.project.id),
-        eq(projectMembers.userId, userId),
-        eq(projectMembers.role, "member"),
-      ),
-    );
+  await sql.transaction((tx) => [
+    tx`WITH removed AS (
+      DELETE FROM project_members WHERE project_id = ${active.project.id}::uuid
+        AND user_id = ${userId}::uuid AND role = 'member' RETURNING user_id
+    )
+    INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
+    SELECT ${active.project.id}::uuid, ${user.id}::uuid, 'member.removed', 'member', user_id::text,
+      '{}'::jsonb FROM removed`,
+  ]);
   revalidatePath("/settings/project");
 }
