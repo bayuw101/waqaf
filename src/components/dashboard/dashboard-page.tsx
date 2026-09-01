@@ -11,7 +11,8 @@ import { rupiah } from "@/lib/finance";
 import { TransactionRow } from "@/components/transactions/transaction-row";
 import { useTransactionSheet } from "@/components/transactions/transaction-sheet";
 export function DashboardPage() {
-  const { transactions, statusOf, outstandingOf, canonicalId } = useFinance(),
+  const { transactions, statusOf, outstandingOf, canonicalId, accounts } =
+      useFinance(),
     sheet = useTransactionSheet(),
     income = transactions.reduce((n, t) => n + t.incomeEffect, 0),
     expense = transactions.reduce((n, t) => n + t.expenseEffect, 0),
@@ -60,17 +61,13 @@ export function DashboardPage() {
         </section>
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
           <b className="text-[13px]">Rekening</b>
-          {[
-            ["Bank Operasional", "Rp31.250.000"],
-            ["Kas Proyek", "Rp12.500.000"],
-            ["E-Wallet", "Rp5.000.000"],
-          ].map((x) => (
+          {accounts.map((account) => (
             <div
-              key={x[0]}
+              key={account.name}
               className="flex justify-between border-b border-[var(--border)] py-3 text-[12px] last:border-0"
             >
-              <span>{x[0]}</span>
-              <b>{x[1]}</b>
+              <span>{account.name}</span>
+              <b>{rupiah(account.balance)}</b>
             </div>
           ))}
         </section>

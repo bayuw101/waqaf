@@ -21,6 +21,8 @@ const projectUsers = [
 ];
 type Context = {
   transactions: Transaction[];
+  accountNames: string[];
+  accounts: { name: string; balance: number }[];
   responsibleNames: string[];
   addResponsibleName: (name: string) => void;
   addTransaction: (t: NewTransaction) => string;
@@ -67,9 +69,13 @@ const FinanceContext = createContext<Context | null>(null);
 export function FinanceProvider({
   children,
   initialTransactions = seedTransactions,
+  accountNames = [],
+  accounts = [],
 }: {
   children: React.ReactNode;
   initialTransactions?: Transaction[];
+  accountNames?: string[];
+  accounts?: { name: string; balance: number }[];
 }) {
   const [transactions, setTransactions] = useState(initialTransactions);
   const [customResponsible, setCustomResponsible] = useState<string[]>([]);
@@ -234,6 +240,8 @@ export function FinanceProvider({
     );
   const value: Context = {
     transactions,
+    accountNames,
+    accounts,
     responsibleNames,
     addResponsibleName,
     addTransaction,

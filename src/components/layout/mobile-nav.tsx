@@ -16,7 +16,7 @@ const nav = [
   { label: "Laporan", href: "/reports", icon: ChartNoAxesColumn },
   { label: "Transparansi", href: "/public", icon: Globe2 },
 ];
-export function MobileNav() {
+export function MobileNav({ hasAccounts }: { hasAccounts: boolean }) {
   const path = usePathname(),
     sheet = useTransactionSheet();
   return (
@@ -29,13 +29,15 @@ export function MobileNav() {
         />
       ))}
       <button
-        onClick={sheet.open}
+        onClick={() =>
+          hasAccounts ? sheet.open() : (location.href = "/accounts")
+        }
         className="flex flex-col items-center text-[10px] text-[var(--shell-muted)]"
       >
         <span className="-mt-4 flex h-10 w-10 items-center justify-center rounded-xl border-[3px] border-[var(--shell)] bg-[var(--shell-foreground)] text-[var(--shell)]">
           <Plus size={20} />
         </span>
-        Tambah
+        {hasAccounts ? "Tambah" : "Rekening"}
       </button>
       {nav.slice(2).map((x) => (
         <Item key={x.href} {...x} active={path.startsWith(x.href)} />

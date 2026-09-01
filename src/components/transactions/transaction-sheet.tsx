@@ -17,7 +17,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { useFinance } from "@/lib/finance-provider";
-import { TransactionType } from "@/lib/finance";
+import { TransactionType, effects } from "@/lib/finance";
 import { useToast } from "@/components/ui/toast";
 import { createTransaction } from "@/app/actions/transactions";
 type CreateType = TransactionType;
@@ -37,10 +37,7 @@ const tabPlacement: Record<CreateType, string> = {
 };
 const Context = createContext<{ open: () => void } | null>(null);
 export const useTransactionSheet = () => useContext(Context)!;
-const accounts = ["Bank Operasional", "Kas Proyek", "E-Wallet"].map((x) => ({
-  value: x,
-  label: x,
-}));
+
 export function TransactionSheetProvider({
   children,
 }: {
@@ -56,6 +53,10 @@ export function TransactionSheetProvider({
     [saving, setSaving] = useState(false),
     [errors, setErrors] = useState<Record<string, string>>({});
   const finance = useFinance(),
+    accounts = finance.accountNames.map((name) => ({
+      value: name,
+      label: name,
+    })),
     { toast } = useToast();
   useEffect(() => {
     const h = () => setOpen(true);
@@ -97,6 +98,26 @@ export function TransactionSheetProvider({
           ? "open"
           : "closed";
     try {
+      const optimisticTransaction = {
+        type,
+        date: form.date,
+        description: form.notes || tabs.find((x) => x.type === type)!.label,
+        party: form.party || "Transfer internal",
+        responsible: form.responsible,
+        category: form.category || tabs.find((x) => x.type === type)!.label,
+        account: type === "transfer" ? form.from : form.account || undefined,
+        destinationAccount: type === "transfer" ? form.to : undefined,
+        amount: nominal,
+        status,
+        realizationStatus: realization,
+        realizedAmount: realization === "realized" ? nominal : undefined,
+        parentId: undefined,
+        relationKind: undefined,
+        ref: form.ref || `TRX-${Date.now()}`,
+        due: form.due || undefined,
+        note: form.notes || undefined,
+        ...effects(type, nominal, undefined, realization),
+      } as const;
       await createTransaction({
         type,
         date: form.date,
@@ -109,15 +130,15 @@ export function TransactionSheetProvider({
         amount: nominal,
         status,
         realizationStatus: realization,
-        reference: form.ref || `TRX-${Date.now()}`,
+        reference: optimisticTransaction.ref,
         due: form.due || undefined,
         note: form.notes || undefined,
       });
+      finance.addTransaction(optimisticTransaction);
       setOpen(false);
       setForm({ date: "2026-08-25", realization: "realized" });
       setAmount(null);
       toast({ tone: "success", title: "Transaksi tersimpan" });
-      location.reload();
     } catch (error) {
       toast({
         tone: "error",
@@ -196,6 +217,7 @@ export function TransactionSheetProvider({
             update={update}
             amount={amount}
             setAmount={setAmount}
+            accounts={accounts}
             responsibleNames={finance.responsibleNames}
             addResponsibleName={finance.addResponsibleName}
             partyNames={Array.from(
@@ -230,6 +252,7 @@ function Fields({
   update,
   amount,
   setAmount,
+  accounts,
   responsibleNames,
   addResponsibleName,
   partyNames,
@@ -241,6 +264,7 @@ function Fields({
   update: (k: string, v: string) => void;
   amount: number | null;
   setAmount: (v: number | null) => void;
+  accounts: { value: string; label: string }[];
   responsibleNames: string[];
   addResponsibleName: (name: string) => void;
   partyNames: string[];

@@ -18,7 +18,14 @@ import {
   updateTransactionMetadata,
 } from "@/app/actions/transaction-maintenance";
 import { useToast } from "@/components/ui/toast";
-export function TransactionDetail({ id }: { id: string }) {
+import { TransactionAttachments } from "./transaction-attachments";
+export function TransactionDetail({
+  id,
+  attachments = [],
+}: {
+  id: string;
+  attachments?: { id: string; name: string; mimeType: string; size: number }[];
+}) {
   const finance = useFinance(),
     router = useRouter(),
     { toast } = useToast(),
@@ -142,6 +149,7 @@ export function TransactionDetail({ id }: { id: string }) {
           </p>
         </aside>
       </div>
+      <TransactionAttachments transactionId={root.id} initial={attachments} />
       <section className="mt-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]">
         <div className="border-b border-[var(--border)] px-4 py-3">
           <h2 className="text-[13px] font-bold">Riwayat transaksi</h2>

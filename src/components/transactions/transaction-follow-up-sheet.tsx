@@ -38,7 +38,7 @@ export function TransactionFollowUpSheet({
     [saving, setSaving] = useState(false),
     finance = useFinance(),
     { toast } = useToast(),
-    { responsibleNames, addResponsibleName } = finance,
+    { responsibleNames, addResponsibleName, accountNames } = finance,
     realize =
       transaction.type === "cash_out" &&
       transaction.realizationStatus === "pending",
@@ -229,9 +229,10 @@ export function TransactionFollowUpSheet({
                   <SelectField
                     label="Rekening pengembalian"
                     value={account}
-                    options={["Bank Operasional", "Kas Proyek", "E-Wallet"].map(
-                      (name) => ({ value: name, label: name }),
-                    )}
+                    options={accountNames.map((name) => ({
+                      value: name,
+                      label: name,
+                    }))}
                     onChange={setAccount}
                   />
                 ) : null}
@@ -254,9 +255,10 @@ export function TransactionFollowUpSheet({
             <SelectField
               label="Rekening"
               value={account}
-              options={["Bank Operasional", "Kas Proyek", "E-Wallet"].map(
-                (x) => ({ value: x, label: x }),
-              )}
+              options={accountNames.map((name) => ({
+                value: name,
+                label: name,
+              }))}
               onChange={setAccount}
             />
             <ComboboxField
