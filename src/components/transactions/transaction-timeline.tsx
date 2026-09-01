@@ -33,7 +33,7 @@ export function TransactionTimeline({
   transactions: Transaction[];
 }) {
   const ordered = [...transactions].sort((a, b) =>
-    a.date.localeCompare(b.date),
+    b.date.localeCompare(a.date),
   );
   return (
     <div className="relative">

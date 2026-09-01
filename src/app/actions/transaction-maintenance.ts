@@ -141,16 +141,38 @@ export async function cancelTransaction(id: string, reason: string) {
       SELECT * FROM transactions WHERE id = ${id}::uuid AND project_id = ${active.project.id}::uuid AND cancelled_at IS NULL
     ), family AS (
       SELECT * FROM transactions WHERE id = ${id}::uuid OR parent_id = ${id}::uuid
+    ), impacts AS (
+      SELECT l.account_id, sum(l.amount)::bigint original_amount
+      FROM ledger_entries l JOIN family f ON f.id = l.transaction_id
+      WHERE l.reversal_of_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM ledger_entries r WHERE r.reversal_of_id = l.id)
+      GROUP BY l.account_id
+    ), reversal_transactions AS (
+      INSERT INTO transactions (project_id, parent_id, type, relation_kind, transaction_date,
+        description, party, responsible, category, account_id, amount, cash_effect,
+        income_effect, expense_effect, status, realization_status, reference, note,
+        created_by, updated_by)
+      SELECT r.project_id, r.id,
+        CASE WHEN i.original_amount > 0 THEN 'cash_out' ELSE 'cash_in' END::transaction_type,
+        'correction'::relation_kind, CURRENT_DATE, 'Pembatalan ' || r.description,
+        r.party, r.responsible, 'Pembatalan', i.account_id, abs(i.original_amount),
+        -i.original_amount, 0, 0, 'closed', 'not_required',
+        r.reference || '-VOID-' || row_number() over (), ${cleanReason}::text,
+        ${user.id}::uuid, ${user.id}::uuid
+      FROM root r CROSS JOIN impacts i RETURNING id, project_id, account_id, cash_effect
     ), reversals AS (
       INSERT INTO ledger_entries (project_id, transaction_id, account_id, amount, reversal_of_id)
-      SELECT l.project_id, l.transaction_id, l.account_id, -l.amount, l.id
+      SELECT rt.project_id, rt.id, l.account_id, -l.amount, l.id
       FROM ledger_entries l JOIN family f ON f.id = l.transaction_id
-      WHERE l.reversal_of_id IS NULL AND NOT EXISTS (SELECT 1 FROM ledger_entries r WHERE r.reversal_of_id = l.id)
+      JOIN reversal_transactions rt ON rt.account_id = l.account_id
+      WHERE l.reversal_of_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM ledger_entries r WHERE r.reversal_of_id = l.id)
       RETURNING account_id, amount
     ), totals AS (
       SELECT account_id, sum(amount)::bigint amount FROM reversals GROUP BY account_id
     ), balances AS (
-      UPDATE accounts a SET current_balance = a.current_balance + t.amount, version = a.version + 1, updated_at = now()
+      UPDATE accounts a SET current_balance = a.current_balance + t.amount,
+        version = a.version + 1, updated_at = now()
       FROM totals t WHERE a.id = t.account_id RETURNING a.id
     ), cancelled AS (
       UPDATE transactions t SET cancelled_at = now(), cancelled_by = ${user.id}::uuid,
@@ -159,7 +181,9 @@ export async function cancelTransaction(id: string, reason: string) {
     )
     INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
     SELECT project_id, ${user.id}::uuid, 'transaction.cancelled', 'transaction', id::text,
-      jsonb_build_object('reason', ${cleanReason}::text) FROM cancelled WHERE id = ${id}::uuid`,
+      jsonb_build_object('reason', ${cleanReason}::text,
+        'reversals', (SELECT count(*) FROM reversal_transactions))
+    FROM cancelled WHERE id = ${id}::uuid`,
   ]);
   revalidatePath("/transactions");
   revalidatePath("/dashboard");

@@ -63,7 +63,10 @@ export function TransactionCenter() {
                   .toLowerCase()
                   .includes(query.toLowerCase())) &&
               (!account || t.account === account) &&
-              (!lifecycle || statusOf(t.id) === lifecycle) &&
+              (!lifecycle ||
+                (lifecycle === "cancelled"
+                  ? t.cancelled
+                  : !t.cancelled && statusOf(t.id) === lifecycle)) &&
               t.date >= start &&
               t.date <= end,
           )
@@ -131,6 +134,7 @@ export function TransactionCenter() {
             { value: "", label: "Semua status" },
             { value: "open", label: "Belum selesai" },
             { value: "closed", label: "Selesai" },
+            { value: "cancelled", label: "Dibatalkan" },
           ]}
           onChange={setLifecycle}
         />

@@ -145,16 +145,20 @@ export function TransactionRow({
               <span
                 className={cn(
                   "shrink-0 rounded-md px-2 py-0.5 text-[9px]",
-                  current === "closed"
-                    ? "bg-[var(--success-soft)] text-[var(--success)]"
-                    : "bg-[var(--warning-soft)] text-[var(--warning)]",
+                  transaction.cancelled
+                    ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                    : current === "closed"
+                      ? "bg-[var(--success-soft)] text-[var(--success)]"
+                      : "bg-[var(--warning-soft)] text-[var(--warning)]",
                 )}
               >
-                {current === "closed"
-                  ? "Selesai"
-                  : transaction.realizationStatus === "pending"
-                    ? "Menunggu realisasi"
-                    : "Belum selesai"}
+                {transaction.cancelled
+                  ? "Dibatalkan"
+                  : current === "closed"
+                    ? "Selesai"
+                    : transaction.realizationStatus === "pending"
+                      ? "Menunggu realisasi"
+                      : "Belum selesai"}
               </span>
             </div>
           </div>
@@ -195,16 +199,20 @@ export function TransactionRow({
           <span
             className={cn(
               "w-max rounded-md px-2 py-0.5 text-[10px]",
-              current === "closed"
-                ? "bg-[var(--success-soft)] text-[var(--success)]"
-                : "bg-[var(--warning-soft)] text-[var(--warning)]",
+              transaction.cancelled
+                ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                : current === "closed"
+                  ? "bg-[var(--success-soft)] text-[var(--success)]"
+                  : "bg-[var(--warning-soft)] text-[var(--warning)]",
             )}
           >
-            {current === "closed"
-              ? "Selesai"
-              : transaction.realizationStatus === "pending"
-                ? "Menunggu realisasi"
-                : "Belum selesai"}
+            {transaction.cancelled
+              ? "Dibatalkan"
+              : current === "closed"
+                ? "Selesai"
+                : transaction.realizationStatus === "pending"
+                  ? "Menunggu realisasi"
+                  : "Belum selesai"}
           </span>
           <span className="text-right tabular-nums">
             <b

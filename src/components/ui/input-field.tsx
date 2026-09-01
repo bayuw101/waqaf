@@ -25,6 +25,7 @@ export const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
       className,
       onFocus,
       onBlur,
+      onChange,
       value,
       defaultValue,
       disabled,
@@ -54,7 +55,7 @@ export const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
         dismissedErrorRef.current = error;
       }
       if (value === undefined) setInternalValue(e.target.value);
-      props.onChange?.(e);
+      onChange?.(e);
     }
 
     return (

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, transactions } from "@/db/schema";
 import type { Transaction } from "@/lib/finance";
@@ -11,7 +11,7 @@ export async function projectTransactions(
     .from(transactions)
     .leftJoin(accounts, eq(transactions.accountId, accounts.id))
     .where(eq(transactions.projectId, projectId))
-    .orderBy(transactions.transactionDate);
+    .orderBy(desc(transactions.transactionDate), desc(transactions.createdAt));
 
   return rows.map(({ transaction, accountName }) => ({
     id: transaction.id,

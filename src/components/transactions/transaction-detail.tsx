@@ -68,6 +68,22 @@ export function TransactionDetail({
     status = finance.statusOf(root.id),
     outstanding = finance.outstandingOf(root.id),
     follow = status === "open" ? followUpAction(root) : null,
+    cancellationImpacts = Array.from(
+      family
+        .filter(
+          (transaction) =>
+            !transaction.cancelled && transaction.cashEffect !== 0,
+        )
+        .reduce(
+          (map, transaction) =>
+            map.set(
+              transaction.account || "Rekening tidak diketahui",
+              (map.get(transaction.account || "Rekening tidak diketahui") ||
+                0) - transaction.cashEffect,
+            ),
+          new Map<string, number>(),
+        ),
+    ),
     adminActions = [
       {
         label: "Edit metadata",
@@ -382,6 +398,33 @@ export function TransactionDetail({
         onClose={() => setCancel(false)}
       >
         <div className="space-y-3">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--accent)] p-3">
+            <b className="text-[10px]">Dampak pembatalan</b>
+            <p className="mt-0.5 text-[9px] text-[var(--muted-foreground)]">
+              Sistem membuat transaksi reversal baru dan mengembalikan seluruh
+              efek kas berikut:
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {cancellationImpacts.map(([account, effect]) => (
+                <div
+                  key={account}
+                  className="flex items-center justify-between text-[10px]"
+                >
+                  <span>{account}</span>
+                  <b
+                    className={
+                      effect >= 0
+                        ? "text-[var(--success)]"
+                        : "text-[var(--danger)]"
+                    }
+                  >
+                    {effect >= 0 ? "+" : "-"}
+                    {rupiah(Math.abs(effect))}
+                  </b>
+                </div>
+              ))}
+            </div>
+          </div>
           <InputField
             label="Alasan pembatalan"
             value={cancelReason}
