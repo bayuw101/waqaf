@@ -32,9 +32,7 @@ export default async function RootLayout({
 }) {
   const session = await auth();
   const isAuthenticated = !!session?.user?.email;
-  const isDashboardRoute = isAuthenticated;
-
-  if (isDashboardRoute) {
+  if (isAuthenticated) {
     const context = await projectContext();
     if (!context.active) redirect("/onboarding");
   }
