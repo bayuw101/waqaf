@@ -2,13 +2,14 @@
 
 import {
   Check,
-  ChevronDown,
   Copy,
   FolderKanban,
+  Home,
   Loader2,
   Plus,
   Send,
   Settings,
+  CircleChevronDown,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -69,7 +70,7 @@ export function ProjectSwitcher({
             {pending && action?.startsWith("switch:") ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <FolderKanban
+              <Home
                 size={13}
                 className="shrink-0 text-[var(--shell-muted)]"
               />
@@ -83,7 +84,7 @@ export function ProjectSwitcher({
               {selected.name}
             </span>
           </span>
-          <ChevronDown
+          <CircleChevronDown
             size={12}
             className={`shrink-0 text-[var(--shell-muted)] transition-transform ${open ? "rotate-180" : ""}`}
           />
@@ -92,7 +93,7 @@ export function ProjectSwitcher({
           <div className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl">
             <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[var(--muted)]/60 px-3 py-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--brand)] shadow-sm">
-                <FolderKanban size={16} />
+                <Home size={16} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[8px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">

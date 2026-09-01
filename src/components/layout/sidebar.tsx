@@ -7,11 +7,13 @@ import {
   ChartNoAxesColumn,
   Globe2,
   Settings,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 const navigation = [
   { label: "Ringkasan", href: "/dashboard", icon: LayoutDashboard },
   { label: "Transaksi", href: "/transactions", icon: ArrowDownUp },
+  { label: "Rekening", href: "/accounts", icon: Landmark },
   { label: "Laporan", href: "/reports", icon: ChartNoAxesColumn },
   { label: "Transparansi", href: "/public", icon: Globe2 },
 ];
@@ -24,7 +26,7 @@ export function Sidebar() {
         aria-label="WAQAF"
         className="mb-6 flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[11px] font-bold text-[var(--brand-strong)]"
       >
-        AK
+        W
       </Link>
       <nav className="flex w-full flex-1 flex-col items-center gap-1.5">
         {navigation.map((item) => {

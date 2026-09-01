@@ -42,10 +42,8 @@ export function Topbar({
       ? "Ringkasan"
       : path.split("/").filter(Boolean).at(-1) || "Ringkasan";
   return (
-    <header className="flex h-[var(--header-height)] items-center gap-3 px-4 text-[var(--shell-foreground)]">
+    <header className="flex h-[var(--header-height)] items-center gap-3 pr-4 text-[var(--shell-foreground)]">
       <div className="flex min-w-0 flex-1 items-center gap-2 text-[11px] text-[var(--shell-muted)]">
-        <Home size={14} />
-        <ChevronDown size={11} className="-rotate-90" />
         <ProjectSwitcher
           active={activeProject}
           projects={projects}
