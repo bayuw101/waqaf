@@ -24,12 +24,12 @@ export async function createAccount(formData: FormData) {
   await sql.transaction((tx) => [
     tx`WITH created AS (
       INSERT INTO accounts (project_id, name, opening_balance, current_balance)
-      VALUES (${active.project.id}, ${name}, ${openingBalance.toString()}, ${openingBalance.toString()})
+      VALUES (${active.project.id}::uuid, ${name}::text, ${openingBalance.toString()}::bigint, ${openingBalance.toString()}::bigint)
       RETURNING id
     )
     INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
-    SELECT ${active.project.id}, ${user.id}, 'account.created', 'account', id::text,
-      jsonb_build_object('name', ${name}, 'openingBalance', ${openingBalance.toString()})
+    SELECT ${active.project.id}::uuid, ${user.id}::uuid, 'account.created', 'account', id::text,
+      jsonb_build_object('name', ${name}::text, 'openingBalance', ${openingBalance.toString()}::bigint)
     FROM created`,
   ]);
   revalidatePath("/accounts");
@@ -81,7 +81,7 @@ export async function adjustBalance(accountId: string, formData: FormData) {
   await sql.transaction((tx) => [
     tx`WITH locked AS (
       SELECT * FROM accounts
-      WHERE id = ${accountId} AND project_id = ${active.project.id}
+      WHERE id = ${accountId}::uuid AND project_id = ${active.project.id}::uuid
       FOR UPDATE
     ), delta AS (
       SELECT *, ${actualBalance.toString()}::bigint - current_balance AS amount FROM locked
@@ -92,21 +92,21 @@ export async function adjustBalance(accountId: string, formData: FormData) {
         status, realization_status, reference, note, created_by, updated_by
       )
       SELECT project_id, CASE WHEN amount >= 0 THEN 'cash_in'::transaction_type ELSE 'cash_out'::transaction_type END,
-        CURRENT_DATE, 'Penyesuaian saldo ' || name, 'Internal', ${user.name || user.email},
+        CURRENT_DATE, 'Penyesuaian saldo ' || name, 'Internal', ${user.name || user.email}::text,
         'Penyesuaian saldo', id, abs(amount), amount, 0, 0, 'closed'::transaction_status,
-        'not_required'::realization_status, 'ADJ-' || extract(epoch from now())::bigint, ${reason}, ${user.id}, ${user.id}
+        'not_required'::realization_status, 'ADJ-' || extract(epoch from now())::bigint, ${reason}::text, ${user.id}::uuid, ${user.id}::uuid
       FROM delta RETURNING id, project_id, account_id, cash_effect
     ), ledger AS (
       INSERT INTO ledger_entries (project_id, transaction_id, account_id, amount)
       SELECT project_id, id, account_id, cash_effect FROM transaction_row
     ), updated AS (
-      UPDATE accounts SET current_balance = ${actualBalance.toString()}, version = version + 1, updated_at = now()
-      WHERE id = ${accountId} AND project_id = ${active.project.id}
+      UPDATE accounts SET current_balance = ${actualBalance.toString()}::bigint, version = version + 1, updated_at = now()
+      WHERE id = ${accountId}::uuid AND project_id = ${active.project.id}::uuid
       RETURNING id
     )
     INSERT INTO audit_logs (project_id, actor_id, action, object_type, object_id, summary)
-    SELECT ${active.project.id}, ${user.id}, 'account.adjusted', 'account', id::text,
-      jsonb_build_object('actualBalance', ${actualBalance.toString()}, 'reason', ${reason}) FROM updated`,
+    SELECT ${active.project.id}::uuid, ${user.id}::uuid, 'account.adjusted', 'account', id::text,
+      jsonb_build_object('actualBalance', ${actualBalance.toString()}::bigint, 'reason', ${reason}::text) FROM updated`,
   ]);
   revalidatePath("/accounts");
 }
