@@ -3,9 +3,8 @@
 import { signIn } from "@/auth";
 
 export async function signInWithGoogle(invitationToken?: string) {
-  const callbackUrl = invitationToken
+  const redirectTo = invitationToken
     ? `/invite/${encodeURIComponent(invitationToken)}`
-    : "/";
-
-  await signIn("google", { redirectTo: callbackUrl });
+    : "/dashboard";
+  await signIn("google", { redirectTo });
 }

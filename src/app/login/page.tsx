@@ -1,4 +1,4 @@
-import { Landmark, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Landmark, ShieldCheck } from "lucide-react";
 import { signInWithGoogle } from "./actions";
 
 const errorCopy: Record<string, string> = {
@@ -15,7 +15,15 @@ export default async function LoginPage({
   const { error, invitation } = await searchParams;
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--shell)] p-4">
-      <section className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-xl">
+      <section className="relative w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-xl">
+        <a
+          href="/"
+          aria-label="Kembali ke beranda"
+          title="Kembali ke beranda"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          <ArrowLeft size={14} />
+        </a>
         <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]">
           <Landmark size={21} />
         </div>
@@ -54,6 +62,14 @@ export default async function LoginPage({
           />
           WAQAF hanya menggunakan Google untuk autentikasi. Kami tidak menyimpan
           password Anda.
+        </div>
+        <div className="mt-4 flex justify-center gap-4 text-[9px] font-semibold text-[var(--muted-foreground)]">
+          <a href="/privacy" className="hover:text-[var(--brand)]">
+            Privasi
+          </a>
+          <a href="/terms" className="hover:text-[var(--brand)]">
+            Ketentuan
+          </a>
         </div>
       </section>
     </main>
