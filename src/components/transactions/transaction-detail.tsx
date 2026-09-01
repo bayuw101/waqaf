@@ -93,7 +93,11 @@ export function TransactionDetail({
       {
         label: "Buat koreksi",
         icon: <RefreshCcw size={13} />,
-        onClick: () => setCorrection(true),
+        onClick: () => {
+          setCorrectionAccount(root.account || "");
+          setCorrectionDirection("in");
+          setCorrection(true);
+        },
       },
       {
         label: "Batalkan transaksi",
@@ -259,7 +263,11 @@ export function TransactionDetail({
       <Dialog
         open={correction}
         title="Buat koreksi"
-        description="Pilih arah koreksi. Koreksi kas masuk menambah saldo; koreksi kas keluar mengurangi saldo."
+        description={
+          root.realizationStatus === "pending"
+            ? "Koreksi mengubah kas yang sudah keluar; biaya aktual tetap menunggu realisasi."
+            : "Pilih arah koreksi. Koreksi kas masuk menambah saldo; koreksi kas keluar mengurangi saldo."
+        }
         onClose={() => setCorrection(false)}
       >
         <form
@@ -323,6 +331,14 @@ export function TransactionDetail({
           }}
           className="space-y-3"
         >
+          {root.realizationStatus === "pending" && (
+            <div className="rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-soft)] p-3 text-[10px] leading-5 text-[var(--warning)]">
+              <b className="block">Transaksi belum terealisasi</b>
+              Koreksi dicatat terhadap uang yang sudah keluar dari rekening,
+              bukan biaya aktual. Nilai aktual tetap dicatat melalui Catat
+              realisasi.
+            </div>
+          )}
           {correctionErrors.form && (
             <div
               role="alert"
