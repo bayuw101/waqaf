@@ -33,8 +33,13 @@ export function TransactionDetail({
     router = useRouter(),
     { toast } = useToast(),
     { openFollowUp } = useTransactionFollowUp(),
-    canonical = finance.canonicalId(id),
-    root = finance.transactions.find((t) => t.id === canonical),
+    selected = finance.transactions.find(
+      (transaction) => transaction.id === id,
+    ),
+    canonical = selected ? finance.canonicalId(id) : id,
+    root = selected
+      ? finance.transactions.find((transaction) => transaction.id === canonical)
+      : undefined,
     [cancel, setCancel] = useState(false),
     [edit, setEdit] = useState(false),
     [correction, setCorrection] = useState(false),

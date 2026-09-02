@@ -79,8 +79,11 @@ export function FinanceProvider({
 }) {
   const [transactions, setTransactions] = useState(initialTransactions);
   const [customResponsible, setCustomResponsible] = useState<string[]>([]);
-  const get = (id: string, list = transactions) =>
-    list.find((t) => t.id === id)!;
+  const get = (id: string, list = transactions) => {
+    const transaction = list.find((item) => item.id === id);
+    if (!transaction) throw new Error("Transaksi tidak ditemukan");
+    return transaction;
+  };
   function addTransaction(t: NewTransaction, persistedId?: string) {
     const id = persistedId || crypto.randomUUID();
     setTransactions((x) => [{ ...t, id }, ...x]);
